@@ -83,7 +83,7 @@ Ensure alignment with the 10 fundamental engineering standards:
 | **Rule 6** | **Cloud Run Observability**| Liveness Probe configured at `/healthz`; structured JSON logs to Cloud Logging; latency alerts. |
 | **Rule 7** | **Post-Deploy Smoke Test** | Automated integration/smoke test against live Cloud Run URL; auto-rollback on failure. |
 | **Rule 8** | **Unified `.env` Management**| Single unified `.env` file with base shared variables, `NONPROD_*` block, and `PROD_*` block. Zero hardcoding. |
-| **Rule 9** | **Terraform & Infra Manager** | Declarative IaC under `terraform/`; isolated Infrastructure Manager deployments (`phenol-container-nonprod` vs `phenol-container-prod`). |
+| **Rule 9** | **Terraform & Infra Manager** | Declarative IaC under `terraform/`; isolated Infrastructure Manager deployments (`<service>-nonprod` vs `<service>-prod`). |
 | **Rule 10**| **IAM & Ingress** | Zero `allUsers` bindings; Pattern 3 (invoker-iam-disabled: true) / Pattern 1 (IAP) / Pattern 2 (App-level OAuth 2.0). |
 
 ---

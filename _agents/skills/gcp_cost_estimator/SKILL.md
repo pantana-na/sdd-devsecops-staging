@@ -3,10 +3,11 @@ name: gcp-cost-estimator
 description: >-
   Estimate running Google Cloud Platform (GCP) cloud infrastructure costs by analyzing
   architecture design documents, diagrams, and codebase implementations. Queries real-time
-  unit pricing from Google Cloud Billing API or public pricing endpoints, elicits unknown
-  workload variables (users, RPS, queries, token counts) from the user, applies explicit
-  baseline assumptions for missing or overly granular inputs, and generates itemized markdown cost reports
-  in the "docs" folder inside the project folder with Committed Use Discount (CUD) and FinOps optimization recommendations.
+  unit pricing strictly from the live Google Cloud Billing API or official live Google Cloud pricing web pages
+  (zero price caching or fallback to local caching is permitted), elicits ALL required
+  workload variables and sizing parameters from the user by asking every necessary question without making
+  unverified assumptions, and generates detailed, itemized markdown cost reports in the "docs" folder
+  inside the project folder with Committed Use Discount (CUD) and FinOps optimization recommendations.
 ---
 
 # Google Cloud Platform (GCP) Cost Estimation Skill
@@ -15,16 +16,28 @@ You are an expert Google Cloud Principal Architect and FinOps Specialist. Your o
 
 ---
 
+## Core Mandates: Zero Assumptions & Strictly Live Pricing
+
+1. **Ask ALL Required Questions — Zero Unilateral Assumptions:**
+   - You **MUST NOT make your own assumptions**, guess workload variables, adopt silent default archetypes, or invent traffic metrics.
+   - You **MUST ask the user all required questions (no matter how many questions are required)** to gather every variable needed for a detailed, itemized cost calculation.
+   - If the user is unsure about a low-level parameter, you must explain the technical options with realistic scenarios and have the user choose explicitly.
+2. **Strictly Live Pricing Queries — Zero Price Caching:**
+   - All unit pricing **MUST be queried in real time** from the **Google Cloud Billing API** or official live Google Cloud pricing web pages (`cloud.google.com/<service>/pricing`).
+   - **NO price caching, static pricing tables, offline benchmark dictionaries, or fallback to local cached rates is permitted.**
+
+---
+
 ## Workflow Overview
 
-Execute the cost estimation process across 6 structured phases:
+Execute the cost estimation process across 6 sequential phases:
 
 ```mermaid
 flowchart LR
     A[1. Architecture & Code Discovery] --> B[2. Component Inventory BoM]
-    B --> C[3. Parameter Elicitation]
-    C --> D[4. Stated Assumptions]
-    D --> E[5. Dynamic Pricing Query]
+    B --> C[3. Comprehensive Parameter Elicitation]
+    C --> D[4. Parameter Confirmation & Validation]
+    D --> E[5. Real-Time Live Pricing Resolution]
     E --> F[6. Markdown Cost Report in docs/]
 ```
 
@@ -42,79 +55,132 @@ Scan the project workspace to identify all provisioned and planned GCP services:
 ## Phase 2: Component Inventory & Bill of Materials (BoM) Mapping
 
 Categorize every discovered component into primary GCP service domains:
-
 - **Compute & Containers**: Cloud Run (vCPU, memory, min/max instances, concurrency), GKE (Standard vs Autopilot, node machine types, cluster fees), Compute Engine (machine family, vCPU, RAM, boot disk size/type).
 - **Databases & Caching**: Cloud SQL (engine, tier, dedicated vCPU/RAM, HA multi-zone, storage size, backups), Cloud Spanner (PUs/nodes, storage), Bigtable, Firestore, Memorystore for Redis/Memcached.
 - **Storage**: Cloud Storage buckets (Standard, Nearline, Coldline, Archive), Persistent Disks (`pd-standard`, `pd-balanced`, `pd-ssd`, `hyperdisk`).
 - **Analytics & Event Streaming**: BigQuery (on-demand vs capacity slots, active vs long-term storage), Pub/Sub (ingestion throughput, retention), Datastream (CDC volume), Dataflow (vCPU/GB workers).
-- **Generative AI & Vertex AI**: Gemini models (Gemini 3.7 Flash, Gemini 3.1 Pro, Gemini 1.5 Flash/Pro: input/output token volume), Text Embeddings, Vector Search (Index endpoints, replica count), Vertex Feature Store.
+- **Generative AI & Vertex AI**: Gemini models (Gemini 3.7 Flash, Gemini 3.1 Pro, Gemini 2.0 Flash: input/output token volume), Text Embeddings, Vector Search (Index endpoints, replica count), Vertex Feature Store.
 - **Networking & Ingress**: Cloud Application Load Balancer (forwarding rules, data processed), Cloud NAT (gateways, egress throughput), Cloud Armor, Cloud CDN, Internet Egress (Standard vs Premium tier), Inter-region traffic.
 
 ---
 
-## Phase 3: Workload Parameter Elicitation
+## Phase 3: Comprehensive Workload Parameter Elicitation (Ask ALL Required Questions)
 
-Identify unknown runtime variables that cannot be inferred solely from static code or diagrams.
+Identify every unknown runtime variable that cannot be determined with 100% certainty from static code or diagrams.
 
-### Variables to Clarify:
-1. **Scale & User Base**: Daily / Monthly Active Users (DAU / MAU) or queries per second (QPS / RPS).
-2. **Data & Storage Volume**: Initial database size, monthly ingestion/change rate (GB/month), asset storage size.
-3. **GenAI / LLM Volume**: Anticipated prompts/turns per day or month, average context length.
-4. **Target Region**: Primary deployment region (default: `us-central1` if unspecified).
+> [!IMPORTANT]
+> **Do NOT hold back questions to keep things brief.** Ask **all required questions (no matter how many questions are required)** across each discovered component. Detailed calculations require complete workload parameters.
 
-### How to Enquire the User:
-- Use `ask_question` with 2–3 clear, high-level multiple-choice options corresponding to workload tiers (e.g., Dev/POC vs Mid-Scale Production vs Enterprise High-Scale).
-- Keep questions high-level. Do not interrogate the user for dozens of low-level technical parameters.
+### Service-by-Service Questionnaire Checklist:
 
----
+1. **General & Deployment Fundamentals:**
+   - What is the target deployment Google Cloud region(s)?
+   - What is the operational schedule (24/7 continuous operation = 730 hours/month, business hours only, or batch/scheduled)?
+   - Are multi-region or cross-zone disaster recovery setups required?
 
-## Phase 4: Stated Assumption Heuristics
+2. **Compute & Containers (Cloud Run / GKE / Compute Engine):**
+   - What is the anticipated monthly request count or average/peak queries per second (RPS)?
+   - What is the expected average execution time / response latency per request?
+   - For Cloud Run: What concurrency level per container instance is configured?
+   - What are the minimum instances (`min_instances`) and maximum instances (`max_instances`)?
+   - What are the hardware allocations (vCPU and RAM) per container/VM?
+   - For GKE/Compute Engine: What machine family (e.g. `e2-standard-4`, `n2-standard-8`, `c3-standard-4`) and persistent disk types/sizes are needed? Are Spot/Preemptible VMs acceptable?
 
-If the user does not provide exact workload metrics, answers "not sure", skips the questionnaire, or if the system dynamics are too detailed to calibrate manually:
+3. **Databases & Caching (Cloud SQL / Cloud Spanner / Redis):**
+   - What database engine and version will be used (e.g. PostgreSQL, MySQL, Cloud Spanner)?
+   - How many dedicated vCPUs and GB of RAM are required for the database instance?
+   - Is Regional High Availability (standby failover instance in a second zone) required?
+   - How many read replicas are needed?
+   - What is the initial provisioned storage size (GB) and expected monthly storage growth rate?
+   - What is the automated backup frequency and retention window (days)?
+   - For Cloud Spanner: How many Processing Units (PUs) or Nodes are required?
+   - For Memorystore: What cache capacity (GB) is needed, and is HA enabled?
 
-1. **Adopt a Baseline Sizing Archetype**:
-   - **Archetype A: Dev / Sandbox / POC** (<1k users, scale-to-zero compute, single-zone DB, minimal egress).
-   - **Archetype B: MVP / Low-Traffic App** (1k–10k MAU, avg 0.5 RPS, 50 GB DB, ~10k AI turns/mo).
-   - **Archetype C: Mid-Scale Production (Default)** (50k–250k MAU, avg 6 RPS, peak 35 RPS, Cloud SQL HA 4 vCPU/16 GB, 500 GB storage, 100k AI turns/mo).
-   - **Archetype D: Enterprise / High-Throughput Tier** (1M+ MAU, 500+ RPS, Spanner/GKE, multi-TB streaming).
-2. **Apply Universal Standard Defaults**:
-   - **Operating Hours**: `730 hours/month` (24/7 continuous operation).
-   - **Read / Write Ratio**: `80% Read / 20% Write`.
-   - **Network Egress**: `15%` of total transferred/stored data.
-   - **GenAI Prompt Context**: `1,200 input tokens / 500 output tokens` per turn.
-   - **Storage Growth**: `10%` month-over-month.
-   - **Database Backups**: `100%` of primary disk size.
-   - **Cloud Monitoring / Logging**: `2%` operational overhead.
-3. **Explicitly Document Every Assumption**: In the generated report, clearly list all assumed values under a dedicated **"Stated Assumptions"** section so stakeholders understand the foundation of the estimate.
+4. **Object Storage (Cloud Storage):**
+   - What storage class will be used (Standard, Nearline, Coldline, Archive)?
+   - What is the total stored asset volume (GB or TB)?
+   - What is the monthly ingestion/upload volume (GB/month)?
+   - What are the expected monthly Class A (uploads/writes) and Class B (downloads/reads) operations counts?
+   - Are object lifecycle rules configured to transition data to cheaper tiers?
 
-For full baseline details, refer to:
+5. **Analytics & Event Streaming (BigQuery / Pub/Sub / Datastream):**
+   - For BigQuery: What is the billing model (On-Demand vs Capacity / Editions slots)? For on-demand, how many TB of data will queries scan monthly? What is the active vs long-term storage volume?
+   - For Pub/Sub: What is the total volume of messages published and delivered per month (GB or TB)? What is the message retention duration?
+   - For Datastream: What is the monthly volume of change data capture (CDC) records processed (GB/month)?
+
+6. **Generative AI & Vertex AI:**
+   - Which exact foundation model(s) will be deployed (e.g., Gemini 3.7 Flash, Gemini 3.1 Pro, Gemini 2.0 Flash)?
+   - How many inference prompts / conversation turns will occur per day or month?
+   - What is the average input prompt context length (in tokens or characters), including system instructions and retrieved context?
+   - What is the average output generated response length (in tokens or characters)?
+   - Will prompt caching be used for recurring documents?
+   - For Vector Search: What is the embedding dimension, number of index vectors, and how many deployed endpoint replicas are needed?
+
+7. **Networking & Security:**
+   - How much outbound internet network egress (GB or TB) will the workload generate per month?
+   - Which network service tier will be used (Premium Tier vs Standard Tier)?
+   - How many Application Load Balancer forwarding rules and SSL certificates will be configured? How much data will the ALB process?
+   - How many Cloud NAT gateways are needed?
+   - For Cloud Armor: How many security policies and custom rules will be evaluated, and what is the expected monthly query volume?
+
+### How to Ask the User:
+- Use the `ask_question` tool or structured interactive prompts.
+- Group questions logically by service domain.
+- If the user does not know a technical metric (e.g., average token count or latency), do **NOT** silently invent a number. Instead, explain the trade-offs and present 2–3 realistic architectural options (e.g., short Q&A vs comprehensive RAG context), and ask the user to confirm their preferred choice.
+
+For the complete elicitation checklist, refer to:
 [standard_assumptions.md](./references/standard_assumptions.md)
 
 ---
 
-## Phase 5: Dynamic Unit Pricing Resolution
+## Phase 4: Zero-Assumption Validation & Specification Confirmation
 
-Retrieve current unit costs using the built-in pricing scripts and live Google Cloud APIs:
+Before calculating any costs:
+1. **Consolidate Elicited Parameters**: Assemble all user-provided and code-derived parameters into a structured specification matrix.
+2. **Strict Prohibition on Assumptions**:
+   - Do NOT assume continuous 730 hours without confirming.
+   - Do NOT assume arbitrary 80/20 read/write ratios or 15% egress ratios without user verification.
+   - Do NOT assume arbitrary token sizes or monthly query volumes.
+3. **User Confirmation**: Present the parameter matrix to the user to verify accuracy before proceeding to live pricing resolution.
 
-### 1. Fast CLI Lookup & Billing API Query:
-Run the pricing helper script located in `scripts/query_gcp_pricing.py`:
+---
+
+## Phase 5: Real-Time Live Unit Pricing Resolution (Zero Caching)
+
+Retrieve current unit costs exclusively through real-time Google Cloud APIs or official live pricing endpoints:
+
+> [!CAUTION]
+> **NO LOCAL PRICE CACHING**:
+> You are strictly forbidden from using hardcoded prices, cached price files, or static benchmark fallbacks. Every rate used in the Bill of Materials must be verified in real time.
+
+### 1. Live Google Cloud Billing Catalog API (`query_gcp_pricing.py`):
+Use the live pricing query script located in `scripts/query_gcp_pricing.py`:
 
 ```bash
-# Direct benchmark lookup for common resources:
-python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --lookup cloudrun
-python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --lookup gemini
-python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --lookup e2-standard-4
+# Query live Cloud Run rates from Cloud Billing API:
+python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service cloudrun --query "CPU Allocation" --region <REGION>
+python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service cloudrun --query "Memory Allocation" --region <REGION>
 
-# Query live Cloud Billing API (uses active gcloud credentials / ADC):
-python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service compute --query "n2-standard-4" --region us-central1
-python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service storage --region us-central1
+# Query live Cloud SQL rates:
+python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service cloudsql --query "PostgreSQL DB" --region <REGION>
+python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service cloudsql --query "Storage" --region <REGION>
+
+# Query live Compute Engine / Persistent Disk rates:
+python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service compute --query "Instance Core" --region <REGION>
+python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service storage --query "Standard Storage" --region <REGION>
 ```
 
-### 2. Live Web Search Fallback:
-If an emerging product SKU or promotional rate is needed, use `search_web` to verify official pricing on `cloud.google.com/<product>/pricing`.
+### 2. Live Official Google Cloud Web Documentation:
+For services with specialized rates, model token pricing, or emerging features (e.g. Vertex AI Gemini model token pricing):
+- Query official Google Cloud pricing web pages in real time via `search_web` or `read_url_content`:
+  - Vertex AI Gemini pricing: `https://cloud.google.com/vertex-ai/generative-ai/pricing`
+  - Cloud Run pricing: `https://cloud.google.com/run/pricing`
+  - Cloud Storage pricing: `https://cloud.google.com/storage/pricing`
+  - Network egress pricing: `https://cloud.google.com/vpc/network-pricing`
+- Record the exact live source (Billing API SKU ID or official URL) for every unit rate.
 
-### 3. Pricing Reference Catalog:
-Consult the curated pricing matrix for rapid formula calculation:
+### 3. Pricing Dimensions & Formulas Reference:
+Consult the pricing formulas and SKU filter guide:
 [gcp_pricing_catalog.md](./references/gcp_pricing_catalog.md)
 
 ---
@@ -122,7 +188,7 @@ Consult the curated pricing matrix for rapid formula calculation:
 ## Phase 6: Cost Modeling & Markdown Report Generation
 
 ### 1. Deterministic Calculation:
-Calculate the itemized costs using the BoM calculator script:
+Feed the user-confirmed parameters and live unit rates into a structured BoM JSON and calculate totals using:
 ```bash
 python3 _agents/skills/gcp_cost_estimator/scripts/calculate_bom_cost.py <bom_file.json>
 ```
@@ -138,10 +204,10 @@ Follow the template structure in:
 ### Required Report Sections:
 1. **Executive Summary Table**: Monthly & Annual Run-Rates for On-Demand, 1-Year CUD (~28% discount), and 3-Year CUD (~52% discount).
 2. **Visual Cost Distribution**: Mermaid pie chart and percentage breakdown by category (Compute, Database, Storage, AI/ML, Analytics, Networking).
-3. **Itemized Bill of Materials (BoM)**: Service name, SKU, configuration, monthly quantity, unit rate, monthly cost, and rationale.
-4. **Stated Assumptions & Workload Factors**: Clear distinction between user-provided inputs and assumed default values.
+3. **Itemized Bill of Materials (BoM)**: Service name, SKU, sizing, monthly quantity, live unit rate, rate source (API SKU ID or live URL), monthly cost, and rationale.
+4. **Confirmed Workload Parameters**: Exhaustive list of all parameters explicitly confirmed with the user (zero unverified assumptions).
 5. **Sensitivity & Scale Analysis**: Cost progression at 0.5×, 1.0×, 2.0×, and 5.0× traffic.
-6. **FinOps & Cost Optimization Recommendations**: Actionable architectural recommendations (CUD commitments, Spot/Preemptible, Cloud Run concurrency tuning, GCS lifecycle rules, BigQuery clustering).
+6. **FinOps & Cost Optimization Recommendations**: Actionable architectural recommendations (CUD commitments, Cloud Run concurrency tuning, GCS lifecycle rules, BigQuery clustering).
 
 ---
 

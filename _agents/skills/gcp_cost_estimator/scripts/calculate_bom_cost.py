@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 
 def calculate_bom(bom_data: Dict[str, Any]) -> Dict[str, Any]:
     """Calculate all items in the BoM dictionary."""
-    items = bom_data.get("items", [])
+    items = bom_data.get("items") or bom_data.get("line_items", [])
     project_name = bom_data.get("project_name", "GCP Workload")
     currency = bom_data.get("currency", "USD")
     assumptions = bom_data.get("assumptions", [])
@@ -26,17 +26,17 @@ def calculate_bom(bom_data: Dict[str, Any]) -> Dict[str, Any]:
     processed_items = []
 
     for item in items:
-        name = item.get("name", "Unnamed Resource")
+        name = item.get("name") or item.get("component", "Unnamed Resource")
         category = item.get("category", "General")
         service = item.get("service", "GCP")
-        sku = item.get("sku", "")
+        sku = item.get("sku") or item.get("sku_id", "")
         quantity = float(item.get("quantity", 1.0))
         unit = item.get("unit", "units")
         unit_price = float(item.get("unit_price", 0.0))
-        billing_mode = item.get("billing_mode", "per-hour")  # per-hour, per-month, per-gb, per-req, per-token
         usage_per_month = float(item.get("usage_per_month", quantity))
         free_tier_allowance = float(item.get("free_tier_allowance", 0.0))
-        notes = item.get("notes", "")
+        rate_source = item.get("rate_source", "Live Billing API / Web")
+        notes = item.get("notes") or item.get("description", "")
 
         billable_usage = max(0.0, usage_per_month - free_tier_allowance)
         monthly_cost = billable_usage * unit_price
@@ -51,6 +51,7 @@ def calculate_bom(bom_data: Dict[str, Any]) -> Dict[str, Any]:
             "sku": sku,
             "unit": unit,
             "unit_price": unit_price,
+            "rate_source": rate_source,
             "usage_per_month": usage_per_month,
             "free_tier_allowance": free_tier_allowance,
             "billable_usage": billable_usage,
@@ -110,21 +111,22 @@ def generate_markdown_report(result: Dict[str, Any]) -> str:
     md.append("\n")
 
     md.append("## 📋 Itemized Bill of Materials (BoM)\n")
-    md.append("| Component / Service | SKU / Configuration | Monthly Usage | Unit Price | Monthly Cost | Notes / Assumptions |")
-    md.append("| :--- | :--- | :--- | :--- | :--- | :--- |")
+    md.append("| Component / Service | SKU / Configuration | Monthly Usage | Unit Price | Rate Source | Monthly Cost | Notes / Specifications |")
+    md.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
     for it in result.get("items", []):
         name = it["name"]
         sku = it["sku"]
         usage = f"{it['usage_per_month']:,.2f}".rstrip("0").rstrip(".") + f" {it['unit']}"
         unit_p = f"${it['unit_price']:,.6f}".rstrip("0").rstrip(".")
+        rate_src = it.get("rate_source", "Live API / Web")
         mo_c = f"${it['monthly_cost']:,.2f}"
         notes = it["notes"]
-        md.append(f"| **{name}** ({it['service']}) | {sku} | {usage} | {unit_p} | **{mo_c}** | {notes} |")
+        md.append(f"| **{name}** ({it['service']}) | {sku} | {usage} | {unit_p} | {rate_src} | **{mo_c}** | {notes} |")
     md.append("\n")
 
     assumptions = result.get("assumptions", [])
     if assumptions:
-        md.append("## 📝 Stated Assumptions & Workload Factors\n")
+        md.append("## 📝 Confirmed Workload Parameters & Specifications\n")
         for idx, a in enumerate(assumptions, 1):
             md.append(f"{idx}. {a}")
         md.append("\n")

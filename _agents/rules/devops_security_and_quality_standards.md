@@ -58,14 +58,16 @@ In addition to Spec-Driven Development (SDD), all software engineering, reposito
 
 ---
 
-## Rule 6: Cloud Run Observability (Liveness Probes, Logging & Monitoring)
-1. **Liveness & Health Probes:**
+## Rule 6: Cloud Run Observability (Web Applications, API Proxies, Liveness Probes, Logging & Monitoring)
+1. **Target Workloads on Cloud Run:**
+   - **Google Cloud Run** is the dedicated runtime for web frontend applications (React/Vite), API gateways, and thin streaming reverse proxies. Conversational AI agent reasoning engines are decoupled and hosted on the **Gemini Enterprise Agent Platform (`agent_runtime`)** (`_agents/rules/google_adk_and_agent_runtime.md`).
+2. **Liveness & Health Probes:**
    - Applications running on Cloud Run must expose a dedicated health endpoint (`/healthz` or `/api/health`).
    - Cloud Run service configuration must declare a **Liveness Probe** (and Startup Probe if required) pointing to this endpoint to detect unresponsiveness and auto-restart failed containers.
-2. **Cloud Logging:**
+3. **Cloud Logging:**
    - Application logs must output structured JSON or standard log streams to stdout/stderr.
    - Cloud Logging must capture all request logs, AI model proxy latencies, and error stack traces.
-3. **Cloud Monitoring:**
+4. **Cloud Monitoring:**
    - Configure Cloud Monitoring dashboards and alert policies for container health, CPU/memory utilization, request latency (p95/p99), 5xx error rates, and Gemini API quota consumption.
 
 ---
@@ -100,7 +102,7 @@ In addition to Spec-Driven Development (SDD), all software engineering, reposito
 1. **Infrastructure as Code (IaC):**
    - Cloud infrastructure resources (Cloud Run services, Artifact Registry repositories, IAM roles, service accounts, monitoring alerts) are declaratively codified in **Terraform** (`terraform/` directory), parameterized to support multiple environment deployments from a single codebase.
 2. **Independent Infrastructure Manager Deployments:**
-   - Non-Prod and Prod environments are provisioned as independent **Google Cloud Infrastructure Manager** deployments (e.g., `phenol-container-nonprod` vs `phenol-container-prod`), ensuring complete isolation of Terraform state, service lifecycle, and scaling profiles.
+   - Non-Prod and Prod environments are provisioned as independent **Google Cloud Infrastructure Manager** deployments (e.g., `<service>-nonprod` vs `<service>-prod`, or `app-nonprod` vs `app-prod`), ensuring complete isolation of Terraform state, service lifecycle, and scaling profiles.
 3. **Reproducible & Tracked Deployments:**
    - Infrastructure Manager deployment revisions must be tied to specific Git commits/SHAs, branch names, and Cloud Build runs.
    - Drift detection and automated rollbacks must be supported through Infrastructure Manager deployment manifests.
