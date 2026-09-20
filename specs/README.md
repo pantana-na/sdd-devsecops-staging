@@ -1,6 +1,6 @@
-# System Specifications & SDD Registry
+# System Specifications & SDD Registry (`specs/`)
 
-This directory serves as the **Single Source of Truth** for all formal specifications, baseline reverse-engineering documents, feature proposals, and implementation progress tracking following the **Spec-Driven Development (SDD)** mandate.
+This directory serves as the **Single Source of Truth** for all formal specifications, baseline reverse-engineering documents, feature proposals, and implementation progress tracking under the **Spec-Driven Development (SDD)** mandate.
 
 ## Directory Structure
 
@@ -8,32 +8,52 @@ This directory serves as the **Single Source of Truth** for all formal specifica
 specs/
 ├── README.md                      # Index of all specifications and progress reports
 ├── templates/
+│   ├── README.md                  # Specification authoring instructions and guidelines
 │   └── sdd-template.md            # Standardized template with Implementation Plan & Testing sections
 ├── baseline/                      # Baseline SDDs for existing/brownfield code
-│   └── system-overview.md         # Full system architecture, stack & invariants
+│   └── README.md                  # Brownfield discovery protocol and baseline index
 ├── features/                      # Feature specifications and enhancement proposals
+│   └── README.md                  # Feature specification drafting guide and active spec registry
 └── plan/                          # Living implementation progress reports and milestone tracking
+    └── README.md                  # Plan progress tracking protocol and execution logs index
 ```
 
 ---
 
-## Active Specifications Index
+## SDD Governance & Core Principles
 
-### 1. Baseline Specifications (`specs/baseline/`)
-*(Baseline SDDs reverse-engineered from existing code or generated during Phase 0 discovery will be indexed here, e.g., `specs/baseline/system-overview.md`.)*
+All work in this repository is governed by the rules codified in [`_agents/rules/`](../_agents/rules/):
 
-### 2. Feature Specifications (`specs/features/`)
-*(Feature specifications will be indexed here as they are drafted and approved.)*
-
-### 3. Plan Progress Reports (`specs/plan/`)
-*(Living execution progress reports and verification metrics are maintained here.)*
+1. **Spec First, Code Second:** Code is a downstream artifact derived from specifications. Direct code changes without an approved specification and step-by-step implementation plan are strictly prohibited ([`_agents/rules/spec_driven_development.md`](../_agents/rules/spec_driven_development.md)).
+2. **Brownfield Baseline First:** When modifying existing systems, reverse-engineer and document the "as-is" state under `specs/baseline/` before authoring feature changes.
+3. **Mandatory Testing at Every Step:** Every implementation step must define and implement:
+   - **Deterministic Unit Tests:** Happy paths, boundary conditions, error handling.
+   - **Generative Property-Based Tests (PBT):** Mathematical and logical invariants tested across generative input spaces (e.g., `fast-check` in TS, `hypothesis` in Python).
+4. **Runtime Separation of Responsibilities:**
+   - **Conversational AI Agents & Tool Registries:** Built with official `google-adk` and deployed to the **Gemini Enterprise Agent Platform (`agent_runtime`)** ([`_agents/rules/google_adk_and_agent_runtime.md`](../_agents/rules/google_adk_and_agent_runtime.md)).
+   - **Web Applications, API Proxies & Streaming Gateways:** Hosted on **Google Cloud Run (`cloud_run`)** ([`_agents/rules/devops_security_and_quality_standards.md`](../_agents/rules/devops_security_and_quality_standards.md)).
+5. **Model-Driven Reasoning:** Agent intent routing and tool execution are strictly cognitive and model-driven; keyword heuristics, regex routing, and hardcoded fallback arrays are strictly forbidden.
+6. **Live Environment Agent Evaluation:** Trajectory fidelity and tool selection precision ($\ge 95\%$) are continuously evaluated against the live environment via `agents-cli eval`.
+7. **Mandatory Root Cause Investigation & Zero Quick-Patch Standard:** When tests or evals fail, developers/agents must execute the 4-step RCA protocol. Zero quick fixes, mockups, regex patches, or assertion weakening ([`_agents/rules/root_cause_investigation_and_zero_quick_patch.md`](../_agents/rules/root_cause_investigation_and_zero_quick_patch.md)).
+8. **Zero Spec Drift:** Synchronize specification files in `specs/` whenever code contracts or behaviors change.
+9. **Living Plan Progress Tracking:** Continuous execution reports, test verification metrics, and milestone statuses are maintained under `specs/plan/`.
 
 ---
 
-## SDD Guidelines
-- **Spec First, Code Second:** All engineering tasks must be specified here before implementation begins.
-- **Mandatory Testing:** Every step in an implementation plan must include Unit Tests and Property-Based Tests (PBT).
-- **Google ADK & Model-Driven Reasoning:** All agent logic must adhere to Google ADK standards (`_agents/rules/google_adk_and_agent_runtime.md`) with zero regex or hardcoded heuristics.
-- **Root Cause Investigation Standard:** Red tests or failed agent evaluations require deep root cause investigation and explicit user alignment (`_agents/rules/root_cause_investigation_and_zero_quick_patch.md`); zero quick-fix workarounds or mockup stubs.
-- **Zero Spec Drift:** Synchronize specification files whenever code contracts or behaviors change.
-- **Skill Artifacts:** Operational security reports, cost models, and standalone diagrams generated by skills live in the companion [`docs/`](../docs/) folder.
+## Active Specifications Registry
+
+### 1. Baseline Specifications ([`specs/baseline/`](./baseline/))
+- Reverse-engineered models, API contracts, and system invariants reflecting current brownfield subsystems.
+
+### 2. Feature Specifications ([`specs/features/`](./features/))
+- Approved feature designs, architectural delta proposals, and implementation step plans.
+
+### 3. Plan Progress Reports ([`specs/plan/`](./plan/))
+- Living milestone execution logs, test pass rates, benchmark latency metrics, and next actions.
+
+---
+
+## Related Documentation
+- **Agent Operating Manual:** [`AGENTS.md`](../AGENTS.md)
+- **Governance Rules:** [`_agents/rules/`](../_agents/rules/)
+- **Operational & Skill Reports:** [`docs/`](../docs/) (CodeMender SAST audits, GCP cost models, architecture diagrams)
