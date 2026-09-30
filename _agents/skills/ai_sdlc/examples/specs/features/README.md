@@ -4,7 +4,7 @@ This directory contains formal **Feature Specifications** and architectural chan
 
 ## Feature Authoring Guidelines
 
-Every feature document in this directory must be created using the official template at [`specs/templates/sdd-template.md`](../templates/sdd-template.md) and adhere to the **Spec-Driven Development (SDD)** standard ([`_agents/rules/spec_driven_development.md`](../../_agents/rules/spec_driven_development.md)).
+Every feature document in this directory must be created using the official template at [`specs/templates/sdd-template.md`](../templates/sdd-template.md) and adhere to the **Spec-Driven Development (SDD)** standard ([`_agents/rules/ai_sdlc_and_sdd_standards.md`](../../_agents/rules/ai_sdlc_and_sdd_standards.md)).
 
 ### Required Document Sections
 1. **Problem Statement & Objectives:** Context, Goals, and explicit Non-Goals.

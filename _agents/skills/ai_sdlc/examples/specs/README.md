@@ -24,8 +24,8 @@ specs/
 
 All work in this repository is governed by the rules codified in [`_agents/rules/`](../_agents/rules/) and orchestrated by the **[`ai-sdlc` skill](../_agents/skills/ai_sdlc/SKILL.md)**:
 
-1. **3-Phase AI-SDLC & Interactive Phase Gates:** Development progresses through **Phase 1: Inception (Intent Framing & Architecture)** $\rightarrow$ **Phase 2: Execution (SDD Cycle)** $\rightarrow$ **Phase 3: Operation (Integrate & Deploy)**. Agents must ask clarification questions (`ask_question`) whenever unknown factors arise in any phase and obtain explicit user sign-off at every phase boundary ([`_agents/rules/spec_driven_development.md`](../_agents/rules/spec_driven_development.md)).
-2. **Spec First, Code Second:** Code is a downstream artifact derived from specifications. Direct code changes without an approved specification and step-by-step implementation plan are strictly prohibited ([`_agents/rules/spec_driven_development.md`](../_agents/rules/spec_driven_development.md)).
+1. **3-Phase AI-SDLC & Interactive Phase Gates:** Development progresses through **Phase 1: Inception (Intent Framing & Architecture)** $\rightarrow$ **Phase 2: Execution (SDD Cycle)** $\rightarrow$ **Phase 3: Operation (Integrate & Deploy)**. Agents must ask clarification questions (`ask_question`) whenever unknown factors arise in any phase and obtain explicit user sign-off at every phase boundary ([`_agents/rules/ai_sdlc_and_sdd_standards.md`](../_agents/rules/ai_sdlc_and_sdd_standards.md)).
+2. **Spec First, Code Second:** Code is a downstream artifact derived from specifications. Direct code changes without an approved specification and step-by-step implementation plan are strictly prohibited ([`_agents/rules/ai_sdlc_and_sdd_standards.md`](../_agents/rules/ai_sdlc_and_sdd_standards.md)).
 3. **Brownfield Baseline First:** When modifying existing systems, reverse-engineer and document the "as-is" state under `specs/baseline/` before authoring feature changes.
 4. **Mandatory Testing at Every Step:** Every implementation step must define and implement:
    - **Deterministic Unit Tests:** Happy paths, boundary conditions, error handling.
@@ -35,7 +35,7 @@ All work in this repository is governed by the rules codified in [`_agents/rules
    - **Web Applications, API Proxies & Streaming Gateways:** Hosted on **Google Cloud Run (`cloud_run`)** ([`_agents/rules/devops_security_and_quality_standards.md`](../_agents/rules/devops_security_and_quality_standards.md)).
 6. **Model-Driven Reasoning:** Agent intent routing and tool execution are strictly cognitive and model-driven; keyword heuristics, regex routing, and hardcoded fallback arrays are strictly forbidden.
 7. **Live Environment Agent Evaluation:** Trajectory fidelity and tool selection precision ($\ge 95\%$) are continuously evaluated against the live environment via `agents-cli eval`.
-8. **Mandatory Root Cause Investigation & Zero Quick-Patch Standard:** When tests or evals fail, developers/agents must execute the 4-step RCA protocol. Zero quick fixes, mockups, regex patches, or assertion weakening ([`_agents/rules/spec_driven_development.md`](../_agents/rules/spec_driven_development.md)).
+8. **Mandatory Root Cause Investigation & Zero Quick-Patch Standard:** When tests or evals fail, developers/agents must execute the 4-step RCA protocol. Zero quick fixes, mockups, regex patches, or assertion weakening ([`_agents/rules/ai_sdlc_and_sdd_standards.md`](../_agents/rules/ai_sdlc_and_sdd_standards.md)).
 9. **Zero Spec Drift:** Synchronize specification files in `specs/` whenever code contracts or behaviors change.
 10. **Living Plan Progress Tracking:** Continuous execution reports, test verification metrics, and milestone statuses are maintained under `specs/plan/`.
 

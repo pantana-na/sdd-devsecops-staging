@@ -31,11 +31,18 @@ Based on
 
 ## Workflow
 
-1.  User describes their system architecture (components, connections, technologies).
-2.  Generate the architecture documentation and diagram following the design system below.
-3.  Save the markdown document with `write_to_file` to `docs/[project-name]-architecture.md` (or `docs/architecture.md`) inside the project folder. Ensure the `docs/` directory is created if it does not already exist.
-4.  (Optional / Recommended) Save the standalone interactive HTML diagram file to `docs/[project-name]-architecture.html` inside the project folder, and link to it from the markdown document.
-5.  User can view the markdown file or open the HTML file in any browser.
+1. **Architecture & Spec Discovery:**
+   - Inspect existing `specs/baseline/*.md`, `specs/features/SPEC-*.md`, `terraform/*.tf`, `app/`, `src/`, and `server/` to extract confirmed components, runtime boundaries, and data flows.
+2. **Mandatory Clarification of Unknowns (`ask_question`):**
+   - If any architectural boundary or topology detail is unknown or ambiguous, **pause and ask the user via `ask_question`** before generating the diagram:
+     - **Diagram Mode:** Are we generating a **Target Dual-Runtime Architecture** (Greenfield) or a **Brownfield "As-Is vs. Target Modernization" Comparison** (e.g., Legacy 3-Tier/.NET $\rightarrow$ Cloud Run + Agent Runtime)?
+     - **IAM & Ingress Edge Pattern:** Pattern 1 (External HTTPS Load Balancer + Serverless NEG + IAP), Pattern 2 (Direct Ingress + App-Level Google OAuth 2.0), or Pattern 3 (Direct Public Frontend `invoker-iam-disabled: true` + Private Backend)?
+     - **Data & Integration Tiers:** Which specific databases (Cloud SQL, Spanner, Firestore, Vector Search, or legacy SQL Server) and external APIs should be depicted?
+3. **Generate Markdown & Companion Interactive HTML:**
+   - Save the primary markdown architecture document with `write_to_file` to `docs/<project-name>-architecture.md` (ensuring `docs/` exists via `validate_sdlc_gate.py --init` if needed).
+   - Save the standalone interactive HTML/SVG diagram to `docs/<project-name>-architecture.html` and link it from the markdown document.
+4. **Preview & Review:**
+   - Present the links to `docs/<project-name>-architecture.md` and `.html` to the user.
 
 ### Output Location
 
@@ -58,19 +65,19 @@ xdg-open ./docs/my-architecture.html
 
 ## Design System & Visual Language
 
-### Color Palette (Semantic Mapping)
+### Color Palette (Semantic Mapping for Dual-Runtime & Cloud Architecture)
 
 Use specific `rgba` fills and hex strokes to categorize components:
 
-Component Type  | Fill (rgba)               | Stroke (Hex)
-:-------------- | :------------------------ | :----------------------
-**Frontend**    | `rgba(8, 51, 68, 0.4)`    | `#22d3ee` (cyan-400)
-**Backend**     | `rgba(6, 78, 59, 0.4)`    | `#34d399` (emerald-400)
-**Database**    | `rgba(76, 29, 149, 0.4)`  | `#a78bfa` (violet-400)
-**AWS/Cloud**   | `rgba(120, 53, 15, 0.3)`  | `#fbbf24` (amber-400)
-**Security**    | `rgba(136, 19, 55, 0.4)`  | `#fb7185` (rose-400)
-**Message Bus** | `rgba(251, 146, 60, 0.3)` | `#fb923c` (orange-400)
-**External**    | `rgba(30, 41, 59, 0.5)`   | `#94a3b8` (slate-400)
+| Component Type | Fill (`rgba`) | Stroke (`Hex`) | Typical Repository Workloads |
+| :--- | :--- | :--- | :--- |
+| **Frontend / Client (`cloud_run`)** | `rgba(8, 51, 68, 0.4)` | `#22d3ee` (cyan-400) | React/Vite UI, Browser Client, OAuth Sign-In |
+| **API Proxy / Gateway (`cloud_run`)** | `rgba(6, 78, 59, 0.4)` | `#34d399` (emerald-400) | FastAPI/Express Streaming Proxy, `/healthz` Liveness Probe |
+| **AI Agents & ADK (`agent_runtime`)** | `rgba(120, 53, 15, 0.35)` | `#fbbf24` (amber-400) | Gemini Enterprise Agent Platform, ADK `OrchestratorAgent`, Domain Subagents, `FunctionTool` Registry |
+| **Database & Vector Store** | `rgba(76, 29, 149, 0.4)` | `#a78bfa` (violet-400) | Cloud SQL, Spanner, Firestore, Vertex AI Vector Search, Legacy SQL Server |
+| **Security & Guardrails** | `rgba(136, 19, 55, 0.4)` | `#fb7185` (rose-400) | Identity-Aware Proxy (IAP), Model Armor (`before_agent_callback`), Secret Manager, CodeMender SAST |
+| **Event Bus & CI/CD** | `rgba(251, 146, 60, 0.3)` | `#fb923c` (orange-400) | Pub/Sub, Cloud Build, Artifact Registry, Infrastructure Manager (Terraform) |
+| **Legacy / External Tier** | `rgba(30, 41, 59, 0.5)` | `#94a3b8` (slate-400) | Legacy .NET Framework / IIS / WCF Services, Third-Party APIs |
 
 ### Typography & Background
 
@@ -82,7 +89,7 @@ Component Type  | Fill (rgba)               | Stroke (Hex)
 ```svg
 <!-- Background Grid Pattern -->
 <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+  <path d="M 40 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
 </pattern>
 ```
 
@@ -95,17 +102,16 @@ arrows from showing through semi-transparent fills, use a **double-rect masking
 technique**: 1. Draw an opaque background rect (`#0f172a`) 2. Draw the
 semi-transparent styled rect on top
 
-### Connection Rules
+### Dual-Runtime & Brownfield Boundary Rules
 
 -   **Z-Order:** Draw arrows *early* in the SVG (after the grid) so they render
     behind component boxes
--   *Arrowheads:* Defined via SVG markers
--   *Security Flows:* Use dashed lines in rose color (`#fb7185`)
--   *Boundaries:*
-    -   *VPC / Subnets:* Dashed (`4,4`), custom colors (e.g., rose for SG,
-        cyan/amber for VPC/subnets)
-    -   *Security Groups:* Dashed (`4,4`), rose color
-    -   *Regions:* Large dashed (`8,4`), amber color, `rx="12"`
+-   **Arrowheads:** Defined via SVG markers
+-   **Security & Guardrail Flows:** Use dashed lines in rose color (`#fb7185`) for IAP auth verification and Model Armor `before_agent_callback` interception
+-   **Mandatory Runtime Boundary Containers:**
+    -   **Google Cloud Run Boundary (`cloud_run`):** Dashed (`6,4`) cyan/emerald border enclosing Frontend UI, Streaming API Proxy, and `/healthz` probe.
+    -   **Gemini Enterprise Agent Platform Boundary (`agent_runtime`):** Dashed (`8,4`) amber border (`#fbbf24`, `rx="12"`) enclosing the ADK `OrchestratorAgent`, Domain Subagents, `before_agent_callback` Model Armor hook, `FunctionTool` registry, and `agentengine://` session store.
+    -   **Brownfield "As-Is vs. Target" Split Mode:** When documenting a brownfield modernization (e.g., Legacy 3-Tier `.NET Framework` / WCF / SQL Stored Procedures $\rightarrow$ Dual-Runtime), render a top or left **"As-Is Legacy Tier"** boundary box (`#94a3b8` slate dashed border) alongside the **"Target Dual-Runtime Architecture"**, connected by Strangler Fig / API Facade or Data Migration arrows.
 
 ### Spacing & Layout Logic
 

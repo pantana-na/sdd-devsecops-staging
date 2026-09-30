@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-AI-SDLC Gate Readiness Validator (`validate_sdlc_gate.py`)
+AI-SDLC Workspace Scaffolder & Gate Readiness Validator (`validate_sdlc_gate.py`)
 
-Validates repository artifacts, specifications, progress reports, environment templates,
-and operational readiness across the 3 phases of the AI-SDLC:
+Scaffolds the `specs/` and `docs/` directory structures from `_agents/skills/ai_sdlc/examples/`
+into the repository root upon skill activation (`--init`), and validates artifacts across the
+3 phases of the AI-SDLC:
+  - Phase 0 (Activation): Scaffold `specs/` (`baseline/`, `features/`, `plan/`, `templates/`) and `docs/`
   - Phase 1: Inception (Intent Framing & Architecture)
   - Phase 2: Execution (Spec-Driven Development Cycle)
   - Phase 3: Operation (SAST, Repository Integration & Dual-Runtime Deployment)
 
 Usage:
+  python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --init
   python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --phase inception
   python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --phase execution
   python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --phase operation
@@ -17,6 +20,7 @@ Usage:
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -35,15 +39,43 @@ REQUIRED_SDD_SECTIONS = [
 ]
 
 
-def check_file_patterns(directory: Path, pattern: str) -> List[str]:
-    """Return list of matching file paths (excluding README.md)."""
-    if not directory.exists():
-        return []
-    return [
-        str(p.relative_to(directory.parent.parent if directory.parent.name == "specs" else directory.parent))
-        for p in sorted(directory.glob(pattern))
-        if p.is_file() and p.name.lower() != "readme.md"
-    ]
+def scaffold_workspace(repo_root: Path, skill_dir: Path) -> Dict[str, Any]:
+    """
+    Copy `specs/` and `docs/` templates from `_agents/skills/ai_sdlc/examples/`
+    into `repo_root` without overwriting existing files.
+    """
+    examples_dir = skill_dir / "examples"
+    created_files: List[str] = []
+    skipped_existing: List[str] = []
+
+    for folder_name in ("specs", "docs"):
+        src_root = examples_dir / folder_name
+        dst_root = repo_root / folder_name
+        if not src_root.exists():
+            continue
+
+        dst_root.mkdir(parents=True, exist_ok=True)
+        for src_path in sorted(src_root.rglob("*")):
+            rel_path = src_path.relative_to(src_root)
+            dst_path = dst_root / rel_path
+            if src_path.is_dir():
+                dst_path.mkdir(parents=True, exist_ok=True)
+            elif src_path.is_file():
+                dst_path.parent.mkdir(parents=True, exist_ok=True)
+                if not dst_path.exists():
+                    shutil.copy2(src_path, dst_path)
+                    created_files.append(str(dst_path.relative_to(repo_root)))
+                else:
+                    skipped_existing.append(str(dst_path.relative_to(repo_root)))
+
+    return {
+        "action": "AI-SDLC Workspace Initialization (--init)",
+        "status": "INITIALIZED",
+        "repo_root": str(repo_root),
+        "source_templates": str(examples_dir.relative_to(repo_root)) if examples_dir.is_relative_to(repo_root) else str(examples_dir),
+        "created_files": created_files,
+        "skipped_existing_files": skipped_existing,
+    }
 
 
 def validate_inception(repo_root: Path) -> Dict[str, Any]:
@@ -73,6 +105,7 @@ def validate_inception(repo_root: Path) -> Dict[str, Any]:
         "cost_estimates_found": cost_docs,
     }
     reminders = [
+        "If specs/ or docs/ are missing, run: python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --init",
         "Confirm business intent, personas, goals, and explicit non-goals with user via ask_question.",
         "Confirm Dual-Runtime split: Gemini Enterprise Agent Platform (agent_runtime) vs Cloud Run (cloud_run).",
         "Confirm compliant IAM & Ingress pattern (Pattern 1: IAP, Pattern 2: App OAuth, Pattern 3: invoker-iam-disabled).",
@@ -80,7 +113,7 @@ def validate_inception(repo_root: Path) -> Dict[str, Any]:
     ]
     return {
         "phase": "Phase 1: Inception (Intent Framing & Architecture)",
-        "status": "READY_FOR_GATE_1_REVIEW" if specs_dir.exists() and docs_dir.exists() else "MISSING_CORE_DIRS",
+        "status": "READY_FOR_GATE_1_REVIEW" if specs_dir.exists() and docs_dir.exists() else "NEEDS_INIT (--init)",
         "checks": checks,
         "gate_reminders": reminders,
     }
@@ -215,7 +248,12 @@ def validate_operation(repo_root: Path) -> Dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Validate AI-SDLC Phase Gates")
+    parser = argparse.ArgumentParser(description="Scaffold AI-SDLC Workspace & Validate Phase Gates")
+    parser.add_argument(
+        "--init",
+        action="store_true",
+        help="Scaffold specs/ and docs/ directories into the project root from _agents/skills/ai_sdlc/examples/",
+    )
     parser.add_argument(
         "--phase",
         choices=["inception", "execution", "operation", "all"],
@@ -234,7 +272,25 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    skill_dir = Path(__file__).resolve().parents[1]
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parents[4]
+
+    if args.init:
+        init_res = scaffold_workspace(repo_root, skill_dir)
+        if args.json:
+            print(json.dumps(init_res, indent=2))
+        else:
+            print(f"=== {init_res['action']} ===")
+            print(f"Repository Root:  {init_res['repo_root']}")
+            print(f"Source Templates: {init_res['source_templates']}")
+            print(f"Created Files ({len(init_res['created_files'])}):")
+            for f in init_res["created_files"]:
+                print(f"  + {f}")
+            if init_res["skipped_existing_files"]:
+                print(f"Skipped Existing Files ({len(init_res['skipped_existing_files'])}):")
+                for f in init_res["skipped_existing_files"]:
+                    print(f"  = {f}")
+        return
 
     results: List[Dict[str, Any]] = []
     if args.phase in ("inception", "all"):

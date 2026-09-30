@@ -54,74 +54,73 @@ Scan the project workspace to identify all provisioned and planned GCP services:
 
 ## Phase 2: Component Inventory & Bill of Materials (BoM) Mapping
 
-Categorize every discovered component into primary GCP service domains:
-- **Compute & Containers**: Cloud Run (vCPU, memory, min/max instances, concurrency), GKE (Standard vs Autopilot, node machine types, cluster fees), Compute Engine (machine family, vCPU, RAM, boot disk size/type).
-- **Databases & Caching**: Cloud SQL (engine, tier, dedicated vCPU/RAM, HA multi-zone, storage size, backups), Cloud Spanner (PUs/nodes, storage), Bigtable, Firestore, Memorystore for Redis/Memcached.
-- **Storage**: Cloud Storage buckets (Standard, Nearline, Coldline, Archive), Persistent Disks (`pd-standard`, `pd-balanced`, `pd-ssd`, `hyperdisk`).
-- **Analytics & Event Streaming**: BigQuery (on-demand vs capacity slots, active vs long-term storage), Pub/Sub (ingestion throughput, retention), Datastream (CDC volume), Dataflow (vCPU/GB workers).
-- **Generative AI & Vertex AI**: Gemini models (Gemini 3.7 Flash, Gemini 3.1 Pro, Gemini 2.0 Flash: input/output token volume), Text Embeddings, Vector Search (Index endpoints, replica count), Vertex Feature Store.
-- **Networking & Ingress**: Cloud Application Load Balancer (forwarding rules, data processed), Cloud NAT (gateways, egress throughput), Cloud Armor, Cloud CDN, Internet Egress (Standard vs Premium tier), Inter-region traffic.
+Categorize every discovered component across our **Dual-Runtime Architecture** (`agent_runtime` + `cloud_run`) and supporting GCP service domains:
+- **Conversational AI & Gemini Enterprise Agent Platform (`agent_runtime`)**:
+  - **Multi-Hop Agent Trajectory Tokens**: Root `OrchestratorAgent` intent classification + Domain Subagent dispatch + `FunctionTool` schema/response payload tokens per user turn.
+  - **Google Cloud Model Armor**: Pre-flight prompt & post-model response security screening invocations (`before_agent_callback` / `before_model_callback`).
+  - **Continuous Live Agent Evaluation (`agents-cli eval`)**: Monthly evaluation dataset execution token volume across CI/CD and pre-release runs.
+  - **Vertex AI Vector Search & Embeddings**: Text embedding generation + Vector Search index endpoint replicas.
+- **Web Frontend, API Gateway & Streaming Proxies (`cloud_run`)**:
+  - **Cloud Run Services (`NONPROD` & `PROD`)**: Separate profiles for Non-Prod (`NONPROD_MIN_INSTANCES=0`, scale-to-zero) and Prod (`PROD_MIN_INSTANCES>=1`, warm instances, vCPU, RAM, SSE/WebSocket streaming concurrency).
+  - **GKE / Compute Engine (if applicable or in Brownfield "As-Is")**: Node machine types, persistent disks, licensing (e.g., Windows Server / SQL Server for legacy `.NET` workloads).
+- **Databases & Caching**: Cloud SQL (PostgreSQL/MySQL/SQL Server engine, vCPU/RAM, HA multi-zone, storage, backups), Cloud Spanner (PUs/nodes), Firestore, Memorystore for Redis.
+- **Storage**: Cloud Storage buckets (Standard, Nearline, Coldline, Archive), Persistent Disks (`pd-balanced`, `pd-ssd`, `hyperdisk`).
+- **Analytics & Event Streaming**: BigQuery (on-demand vs capacity slots), Pub/Sub, Datastream, Dataflow.
+- **Networking, IAM Ingress & DevSecOps Toolchain**:
+  - **IAM Ingress Pattern**: Pattern 1 External HTTPS Application Load Balancer + Serverless NEG + IAP (forwarding rules + data processed) vs. Pattern 2/3 Direct Cloud Run Ingress.
+  - **DevSecOps & Observability**: Google Cloud Build (build minutes), Artifact Registry (container image storage) + **Artifact Analysis** (automated container vulnerability scanning), Secret Manager (active secret versions + access operations), Cloud Logging & Cloud Monitoring ingestion.
 
 ---
 
 ## Phase 3: Comprehensive Workload Parameter Elicitation (Ask ALL Required Questions)
 
-Identify every unknown runtime variable that cannot be determined with 100% certainty from static code or diagrams.
+Identify every unknown runtime variable that cannot be determined with 100% certainty from static code, `specs/`, or `.env.example`.
 
 > [!IMPORTANT]
-> **Do NOT hold back questions to keep things brief.** Ask **all required questions (no matter how many questions are required)** across each discovered component. Detailed calculations require complete workload parameters.
+> **Do NOT hold back questions to keep things brief.** Ask **all required questions (no matter how many questions are required)** using `ask_question` across each discovered component. Detailed calculations require complete workload parameters.
 
 ### Service-by-Service Questionnaire Checklist:
 
-1. **General & Deployment Fundamentals:**
-   - What is the target deployment Google Cloud region(s)?
-   - What is the operational schedule (24/7 continuous operation = 730 hours/month, business hours only, or batch/scheduled)?
-   - Are multi-region or cross-zone disaster recovery setups required?
+1. **General, Multi-Environment (`NONPROD` vs `PROD`) & Brownfield Baseline:**
+   - What is the target deployment Google Cloud region(s) (`GCP_REGION` / `GENAI_LOCATION`)?
+   - Should we model **both Non-Prod (`main`/`develop`) and Production (`prod`) environments** (aligned with our unified `.env` `NONPROD_*` and `PROD_*` blocks)?
+   - What is the operational schedule for Prod vs Non-Prod (e.g., Prod 24/7 = 730 hrs/month with `PROD_MIN_INSTANCES>=1`; Non-Prod business hours / scale-to-zero `NONPROD_MIN_INSTANCES=0`)?
+   - **If Brownfield Modernization:** Would you like a **Current ("As-Is" Legacy .NET/VM/On-Prem) vs. Target (Dual-Runtime GCP) TCO Comparison**? If so, what are the current VM/SQL Server/license specs?
 
-2. **Compute & Containers (Cloud Run / GKE / Compute Engine):**
-   - What is the anticipated monthly request count or average/peak queries per second (RPS)?
-   - What is the expected average execution time / response latency per request?
-   - For Cloud Run: What concurrency level per container instance is configured?
-   - What are the minimum instances (`min_instances`) and maximum instances (`max_instances`)?
-   - What are the hardware allocations (vCPU and RAM) per container/VM?
-   - For GKE/Compute Engine: What machine family (e.g. `e2-standard-4`, `n2-standard-8`, `c3-standard-4`) and persistent disk types/sizes are needed? Are Spot/Preemptible VMs acceptable?
+2. **Compute & Containers (Cloud Run `cloud_run` / GKE / Compute Engine):**
+   - What is the anticipated monthly request count or average/peak queries per second (RPS) in Prod and Non-Prod?
+   - What is the expected average request/streaming duration (especially for SSE/WebSocket proxy connections to `agent_runtime`)?
+   - For Cloud Run: What concurrency level per container instance, `min_instances`, `max_instances`, vCPU, and RAM are configured for Frontend UI and Streaming Proxy services?
+   - For GKE/Compute Engine: What machine family and persistent disk types/sizes are needed?
 
-3. **Databases & Caching (Cloud SQL / Cloud Spanner / Redis):**
-   - What database engine and version will be used (e.g. PostgreSQL, MySQL, Cloud Spanner)?
-   - How many dedicated vCPUs and GB of RAM are required for the database instance?
-   - Is Regional High Availability (standby failover instance in a second zone) required?
-   - How many read replicas are needed?
-   - What is the initial provisioned storage size (GB) and expected monthly storage growth rate?
-   - What is the automated backup frequency and retention window (days)?
-   - For Cloud Spanner: How many Processing Units (PUs) or Nodes are required?
-   - For Memorystore: What cache capacity (GB) is needed, and is HA enabled?
+3. **Databases & Caching (Cloud SQL / Cloud Spanner / Firestore / Redis):**
+   - What database engine and version will be used (e.g., PostgreSQL, MySQL, SQL Server, Cloud Spanner, Firestore)?
+   - How many dedicated vCPUs and GB of RAM are required for Non-Prod vs Prod database instances?
+   - Is Regional High Availability (HA) enabled for Production? How many read replicas are needed?
+   - What is the initial provisioned storage size (GB), monthly growth rate, and backup retention window?
 
 4. **Object Storage (Cloud Storage):**
-   - What storage class will be used (Standard, Nearline, Coldline, Archive)?
-   - What is the total stored asset volume (GB or TB)?
-   - What is the monthly ingestion/upload volume (GB/month)?
-   - What are the expected monthly Class A (uploads/writes) and Class B (downloads/reads) operations counts?
-   - Are object lifecycle rules configured to transition data to cheaper tiers?
+   - What storage class (Standard, Nearline, Coldline, Archive), total stored volume (GB/TB), and monthly Class A (writes) / Class B (reads) operation counts are expected?
 
 5. **Analytics & Event Streaming (BigQuery / Pub/Sub / Datastream):**
-   - For BigQuery: What is the billing model (On-Demand vs Capacity / Editions slots)? For on-demand, how many TB of data will queries scan monthly? What is the active vs long-term storage volume?
-   - For Pub/Sub: What is the total volume of messages published and delivered per month (GB or TB)? What is the message retention duration?
-   - For Datastream: What is the monthly volume of change data capture (CDC) records processed (GB/month)?
+   - For BigQuery: On-Demand (TB scanned/month) vs Capacity/Editions slots, plus active/long-term storage volume?
+   - For Pub/Sub & Datastream: Monthly message/CDC throughput (GB/TB)?
 
-6. **Generative AI & Vertex AI:**
-   - Which exact foundation model(s) will be deployed (e.g., Gemini 3.7 Flash, Gemini 3.1 Pro, Gemini 2.0 Flash)?
-   - How many inference prompts / conversation turns will occur per day or month?
-   - What is the average input prompt context length (in tokens or characters), including system instructions and retrieved context?
-   - What is the average output generated response length (in tokens or characters)?
-   - Will prompt caching be used for recurring documents?
-   - For Vector Search: What is the embedding dimension, number of index vectors, and how many deployed endpoint replicas are needed?
+6. **Generative AI, ADK Agents (`agent_runtime`), Model Armor & Live Evaluation:**
+   - Which foundation model(s) are used for the ADK `OrchestratorAgent` and domain subagents (e.g., Gemini 2.5 Pro, Gemini 2.5 Flash)?
+   - How many user conversation turns occur per day/month?
+   - **Agentic Multi-Hop Multiplier:** On average, how many LLM reasoning calls + `FunctionTool` invocations occur per user turn (e.g., 1 Orchestrator intent classification + 1–2 Subagent/Tool hops)?
+   - What is the average input token context length (system instructions + `FunctionTool` declarations + retrieved tool data) and output token length per hop?
+   - **Model Armor Guardrails:** Are both input prompts (`before_agent_callback`) and model outputs screened by Google Cloud Model Armor?
+   - **Live Agent Evaluation (`agents-cli eval`):** How many test cases are in `evals/datasets/*.jsonl`, and how many `agents-cli eval run` executions occur per month in CI/CD?
+   - For Vector Search: What is the embedding dimension, vector count, and deployed endpoint replica count?
 
-7. **Networking & Security:**
-   - How much outbound internet network egress (GB or TB) will the workload generate per month?
-   - Which network service tier will be used (Premium Tier vs Standard Tier)?
-   - How many Application Load Balancer forwarding rules and SSL certificates will be configured? How much data will the ALB process?
-   - How many Cloud NAT gateways are needed?
-   - For Cloud Armor: How many security policies and custom rules will be evaluated, and what is the expected monthly query volume?
+7. **Networking, IAM Ingress Pattern & DevSecOps Toolchain:**
+   - **IAM Ingress Pattern (Rule 10):** Which pattern is selected?
+     - *Pattern 1 (IAP + External HTTPS Load Balancer + Serverless NEG)* $\rightarrow$ How many forwarding rules and GB processed?
+     - *Pattern 2 (App-Level OAuth 2.0)* or *Pattern 3 (Direct Ingress `invoker-iam-disabled`)* $\rightarrow$ Zero Load Balancer base fee.
+   - How much outbound internet network egress (GB/TB) and which tier (Premium vs Standard) is expected?
+   - **DevSecOps CI/CD:** How many Cloud Build deployments/month, container images stored/scanned in Artifact Registry, and active secrets in Secret Manager?
 
 ### How to Ask the User:
 - Use the `ask_question` tool or structured interactive prompts.
@@ -141,7 +140,7 @@ Before calculating any costs:
    - Do NOT assume continuous 730 hours without confirming.
    - Do NOT assume arbitrary 80/20 read/write ratios or 15% egress ratios without user verification.
    - Do NOT assume arbitrary token sizes or monthly query volumes.
-3. **User Confirmation**: Present the parameter matrix to the user to verify accuracy before proceeding to live pricing resolution.
+3. **User Confirmation**: Present the parameter matrix to the user via `ask_question` to verify accuracy before proceeding to live pricing resolution.
 
 ---
 
@@ -171,12 +170,13 @@ python3 _agents/skills/gcp_cost_estimator/scripts/query_gcp_pricing.py --service
 ```
 
 ### 2. Live Official Google Cloud Web Documentation:
-For services with specialized rates, model token pricing, or emerging features (e.g. Vertex AI Gemini model token pricing):
+For services with specialized rates, model token pricing, or emerging features (e.g. Vertex AI Gemini model token pricing, Model Armor, Artifact Analysis):
 - Query official Google Cloud pricing web pages in real time via `search_web` or `read_url_content`:
-  - Vertex AI Gemini pricing: `https://cloud.google.com/vertex-ai/generative-ai/pricing`
+  - Vertex AI Gemini & Agent pricing: `https://cloud.google.com/vertex-ai/generative-ai/pricing`
+  - Model Armor pricing: `https://cloud.google.com/security-command-center/pricing`
   - Cloud Run pricing: `https://cloud.google.com/run/pricing`
   - Cloud Storage pricing: `https://cloud.google.com/storage/pricing`
-  - Network egress pricing: `https://cloud.google.com/vpc/network-pricing`
+  - Network & Load Balancing pricing: `https://cloud.google.com/vpc/network-pricing`
 - Record the exact live source (Billing API SKU ID or official URL) for every unit rate.
 
 ### 3. Pricing Dimensions & Formulas Reference:
@@ -202,12 +202,12 @@ Follow the template structure in:
 [cost_report_template.md](./references/cost_report_template.md)
 
 ### Required Report Sections:
-1. **Executive Summary Table**: Monthly & Annual Run-Rates for On-Demand, 1-Year CUD (~28% discount), and 3-Year CUD (~52% discount).
-2. **Visual Cost Distribution**: Mermaid pie chart and percentage breakdown by category (Compute, Database, Storage, AI/ML, Analytics, Networking).
-3. **Itemized Bill of Materials (BoM)**: Service name, SKU, sizing, monthly quantity, live unit rate, rate source (API SKU ID or live URL), monthly cost, and rationale.
+1. **Executive Summary Table (Non-Prod + Prod + Total)**: Monthly & Annual Run-Rates broken down by **Non-Prod (`NONPROD_*`)** and **Prod (`PROD_*`)** for On-Demand, 1-Year CUD (~28% discount), and 3-Year CUD (~52% discount), plus **Brownfield TCO Comparison** (if modernizing a legacy system).
+2. **Visual Cost Distribution**: Mermaid pie chart and percentage breakdown across `agent_runtime` (Gemini/ADK/Model Armor/Evals), `cloud_run` (UI/Streaming Proxy), Databases, Storage, Networking/IAP, and DevSecOps CI/CD.
+3. **Itemized Bill of Materials (BoM)**: Environment (`NONPROD`/`PROD`), Service name, SKU, sizing, monthly quantity, live unit rate, rate source (API SKU ID or live URL), monthly cost, and rationale.
 4. **Confirmed Workload Parameters**: Exhaustive list of all parameters explicitly confirmed with the user (zero unverified assumptions).
 5. **Sensitivity & Scale Analysis**: Cost progression at 0.5×, 1.0×, 2.0×, and 5.0× traffic.
-6. **FinOps & Cost Optimization Recommendations**: Actionable architectural recommendations (CUD commitments, Cloud Run concurrency tuning, GCS lifecycle rules, BigQuery clustering).
+6. **FinOps & Dual-Runtime Optimization Recommendations**: Actionable architectural recommendations (Gemini context caching, `NONPROD_MIN_INSTANCES=0` scale-to-zero, Cloud Run streaming concurrency tuning, CUD commitments, GCS lifecycle rules).
 
 ---
 

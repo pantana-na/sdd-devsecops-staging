@@ -70,16 +70,21 @@ Across **every phase** of the AI-SDLC (Inception, Execution, and Operation):
 
 **Code is a downstream artifact derived from specification documents.** No feature implementation, architectural change, refactoring, or API modification may begin without an approved Specification Document under `specs/`.
 
-### 2.1 Brownfield Development Protocol (Mandatory Baseline First)
-When working on an existing (brownfield) codebase or modifying any existing subsystem:
-1. **Check for Baseline SDD:** Verify if an accurate Baseline SDD exists in `specs/baseline/` for the targeted component.
-2. **Reverse-Engineer Baseline First:** If missing or outdated, inspect existing code, schemas, and APIs to generate a complete Baseline SDD under `specs/baseline/` (`system-overview.md` or `<subsystem>-baseline.md`) documenting the "as-is" architecture, data models, API contracts, business logic, external integrations, and core system invariants.
-3. **Clarify Baseline Unknowns:** If any existing behavior is ambiguous or appears defective during discovery, pause and ask the user via `ask_question` whether to codify it as a baseline invariant or remediate it in the feature spec.
-4. **Baseline Before Delta:** Only after `specs/baseline/` is established may feature specs (`specs/features/`) be drafted against it.
+### 2.1 Two-Track Brownfield Development Protocol (Mandatory Baseline & Safety Net First)
+When working on an existing (brownfield) codebase or modernizing any legacy subsystem (see [`brownfield_assessment_playbook.md`](../skills/ai_sdlc/references/brownfield_assessment_playbook.md)):
+1. **Classify & Reverse-Engineer Baseline First (`specs/baseline/`):**
+   - Author `specs/baseline/system-overview.md` or `specs/baseline/<subsystem>-baseline.md` using `specs/templates/baseline-template.md` (scaffolded from [`_agents/skills/ai_sdlc/examples/specs/templates/baseline-template.md`](../skills/ai_sdlc/examples/specs/templates/baseline-template.md)).
+   - **Track A — Legacy Enterprise / 3-Tier Apps (`.NET Framework`, ASP.NET WebForms/MVC, WCF/SOAP, SQL Server):** Map the Presentation, Business, and Data tiers; extract **hidden business logic** embedded in SQL Stored Procedures (`sp_*`/`usp_*`), Triggers, UI code-behind (`.aspx.cs`), stateful `Session`/`ViewState`, and `Web.config`/`App.config` settings.
+   - **Track B — Modern Cloud-Native Code Lacking Docs & Tests:** Reverse-engineer undocumented route/API contracts, reconcile type drift across frontend/backend/DB schemas, and audit against the **13-Rule Governance Gap Matrix** (flagging coupled LLM agents, regex/keyword routing, missing `/healthz`, or scattered `.env.*` files).
+2. **Clarify Baseline Unknowns & Modernization Strategy (`ask_question`):**
+   - Pause and use `ask_question` to: (a) decide whether ambiguous/quirky legacy behaviors are **Baseline Invariants** or **Defects to Remediate**, and (b) select the **Modernization Strategy** (*Strangler Fig / API Facade*, *Full Dual-Runtime Re-Architecture*, or *In-Place Cloud-Native Hardening*).
+3. **Lock In Characterization Tests & Property-Based Tests (PBT) Before Touching Code:**
+   - Backfill **Characterization Unit Tests** (Golden Master input/output parity) and **Generative Property-Based Tests (PBT)** verifying core baseline invariants before refactoring or migrating code.
+4. **Baseline Before Delta:** Only after `specs/baseline/` and the characterization test safety net are established may feature specs (`specs/features/`) be drafted against them.
 
 ### 2.2 SDD Authoring & Step-by-Step Implementation Plan
 1. **Feature Specification (`specs/features/SPEC-<YYYYMMDD>-<TITLE>.md`):**
-   - Author using [`specs/templates/sdd-template.md`](../../specs/templates/sdd-template.md) covering: (1) Problem Statement & Goals/Non-Goals, (2) Dual-Runtime Architecture & Sequence Diagram, (3) Data Models & Type Contracts, (4) API & `FunctionTool` Contracts, (5) UI/UX State Machines, (6) Governance Checklist, (7) Step-by-Step Implementation Plan & Test Design, and (8) Plan Progress Tracking.
+   - Author using `specs/templates/sdd-template.md` (scaffolded from [`_agents/skills/ai_sdlc/examples/specs/templates/sdd-template.md`](../skills/ai_sdlc/examples/specs/templates/sdd-template.md)) covering: (1) Problem Statement & Goals/Non-Goals, (2) Dual-Runtime Architecture & Sequence Diagram, (3) Data Models & Type Contracts, (4) API & `FunctionTool` Contracts, (5) UI/UX State Machines, (6) Governance Checklist, (7) Step-by-Step Implementation Plan & Test Design, and (8) Plan Progress Tracking.
 2. **Mandatory Testing Standards for EVERY Implementation Step:**
    - **Deterministic Unit Tests:** Concrete examples testing happy paths, boundary conditions, malformed payloads, and error handling.
    - **Generative Property-Based Tests (PBT):** Mathematical and logical invariants verified across randomized/fuzzed input spaces using `fast-check` (TypeScript/JS) or `hypothesis` (Python) (e.g., serialization round-tripping, canonical intent enum membership, security callback interception, state reducer invariants).
@@ -121,7 +126,10 @@ Execute these four steps sequentially whenever a failure or defect occurs:
 
 ---
 
-## 4. Artifact Directory Separation (`specs/` vs. `docs/`)
+## 4. Workspace Scaffolding & Phase-by-Phase Output Folders (`specs/` vs. `docs/`)
 
-- **`specs/` (SDD Artifacts):** Baseline models (`specs/baseline/`), feature specifications (`specs/features/`), reusable templates (`specs/templates/sdd-template.md`), and living progress reports (`specs/plan/`).
-- **`docs/` (Skill-Generated Operational Reports):** Visual architecture diagrams (`docs/*-architecture.md` & `.html`), CodeMender SAST reports (`docs/codemender-*.md`), and live GCP cost estimates (`docs/gcp_cost_estimate_*.md`).
+- **Automatic Scaffolding on Skill Activation (`--init`):** Canonical templates for `specs/` and `docs/` reside in [`_agents/skills/ai_sdlc/examples/specs/`](../skills/ai_sdlc/examples/specs/) and [`_agents/skills/ai_sdlc/examples/docs/`](../skills/ai_sdlc/examples/docs/). When the `ai-sdlc` skill is activated, running `python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --init` automatically scaffolds `specs/` and `docs/` into the project root.
+- **Phase 1 (Inception) Outputs:** Brownfield discovery in `specs/baseline/`, intent & architecture framing in `specs/features/SPEC-*.md` (Sections 1–2), and companion architecture/cost reports in `docs/*-architecture.{md,html}` & `docs/gcp_cost_estimate_*.md`.
+- **Phase 2 (Execution / SDD) Outputs:** Complete feature SDD (`specs/features/SPEC-*.md`), production code (`app/`, `src/`, `server/`), Unit & Property-Based Tests (`tests/`, `evals/`), and living execution progress reports (`specs/plan/PROGRESS_REPORT_*.md`).
+- **Phase 3 (Operation / Deploy) Outputs:** Pre-build CodeMender SAST reports (`docs/codemender-*.md`), CI/CD & IaC (`cloudbuild.yaml`, `terraform/`, `.env.example`), and final post-deploy verification updates in `specs/plan/PROGRESS_REPORT_*.md`.
+

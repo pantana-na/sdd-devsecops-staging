@@ -30,7 +30,7 @@ To ensure modularity, maintainability, and clean isolation, all agents must oper
 4. **ADK App Container:**
    - All agents must be registered within an ADK application container `google.adk.apps.App(root_agent=..., name=...)` exported in the standard agent package (e.g., `app/agent.py`).
 
-### 1.2 Strongly Typed ADK FunctionTools
+### 1.2 Strongly Typed, Resilient ADK FunctionTools & HITL Gate
 1. **Callable Declaration:**
    - All tools interacting with external systems (Databases, Knowledge Catalogs, Object Storage, External APIs) must be registered as ADK tools using type-annotated Python callables with comprehensive Google-style docstrings, or wrapped using `google.adk.tools.FunctionTool`.
 2. **Comprehensive Docstring Contracts:**
@@ -40,18 +40,24 @@ To ensure modularity, maintainability, and clean isolation, all agents must oper
      - **"When NOT to use"** negative constraints to prevent tool miscalling and overlapping scope.
 3. **Type Safety & Data Models:**
    - Tool arguments and return types must use Python type hints and Pydantic models matching the specifications in `specs/`.
+4. **Structured Error Returns (Zero Unhandled Crashes or Fake Fallbacks):**
+   - When an upstream database or API call fails or returns empty results, a `FunctionTool` must return a structured, typed diagnostic payload (e.g., `{"status": "NOT_FOUND" | "UPSTREAM_ERROR", "error_code": "...", "details": "..."}`) so the ADK agent can reason transparently. Returning fake/mockup fallback data is strictly prohibited.
+5. **Mutating / Destructive Tool HITL Gate:**
+   - Any `FunctionTool` that performs state-mutating, financial, or destructive actions (e.g., deleting records, modifying production configurations, submitting external orders) must require explicit Human-in-the-Loop (HITL) user confirmation in the session state before executing the mutation, and must support idempotency keys.
 
-### 1.3 Inline Security via ADK Callbacks
+### 1.3 Inline Security via ADK Callbacks (`Model Armor`)
 1. **Lifecycle Hook Wiring:**
-   - Security guardrails (e.g. Google Cloud Model Armor) must be wired directly into the ADK lifecycle via `before_agent_callback` or `before_model_callback`.
+   - Security guardrails (Google Cloud Model Armor) must be wired directly into the ADK lifecycle via `before_agent_callback` or `before_model_callback` (and `after_model_callback` for output sanitization where required).
 2. **Deterministic Interception:**
    - Any prompt flagged by Model Armor (`filterMatchState == "MATCH_FOUND"`) must abort model reasoning immediately with zero downstream tool invocations.
 
-### 1.4 Session & Working Memory Management
+### 1.4 Session Management & Cloud Run $\leftrightarrow$ `agent_runtime` Proxy Contract
 1. **Managed Session Store:**
-   - Production session state must use managed storage (`--session_service_uri agentengine://...` or standard ADK in-memory/database session stores).
+   - Production session state must use managed storage (`--session_service_uri agentengine://...` or standard ADK database session stores).
 2. **Multi-Turn Context Continuity:**
-   - Clarification states, entity contexts, and user working memory must be preserved within the ADK Context / Session State across multi-turn dialogues.
+   - Clarification states, entity contexts, and user working memory must be preserved within the ADK `ToolContext` / `Session.state` across multi-turn dialogues.
+3. **Stateless Cloud Run Streaming Proxy Handshake:**
+   - The Cloud Run backend proxy (`cloud_run`) must authenticate to the Gemini Enterprise Agent Platform (`agent_runtime`) using Application Default Credentials (ADC) of its dedicated least-privilege Service Account (`roles/aiplatform.user`), forward the verified end-user identity context + `session_id`, and stream chunked ADK events (SSE/WebSocket) back to the React/Vite UI without duplicating agent reasoning in the web tier.
 
 ---
 
@@ -131,7 +137,7 @@ Evaluation datasets (`evals/datasets/*.jsonl`) must be comprehensive and represe
   - Weakening eval criteria or deleting failing test cases to artificially inflate metrics.
 - **Mandated Action on Eval Failure:**
   - Investigate the root cause in prompt instructions, tool docstrings, database records, or model temperature.
-  - Follow the **Mandatory 4-Step Root Cause Investigation (RCA) Protocol** ([`_agents/rules/spec_driven_development.md`](./spec_driven_development.md)).
+  - Follow the **Mandatory 4-Step Root Cause Investigation (RCA) Protocol** ([`_agents/rules/ai_sdlc_and_sdd_standards.md`](./ai_sdlc_and_sdd_standards.md)).
 
 ---
 

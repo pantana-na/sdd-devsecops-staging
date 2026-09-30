@@ -3,7 +3,7 @@ name: ai-sdlc
 description: >-
   Orchestrates the end-to-end 3-Phase AI-Driven Software Development Lifecycle (AI-SDLC):
   Phase 1: Inception (Intent Framing & Architecture), Phase 2: Execution (Spec-Driven Development
-  governed by spec_driven_development.md), and Phase 3: Operation (SAST, Repository Integration &
+  governed by ai_sdlc_and_sdd_standards.md), and Phase 3: Operation (SAST, Repository Integration &
   Dual-Runtime Deployment to Cloud Run and Gemini Enterprise Agent Platform). Proactively asks
   clarification questions via ask_question whenever unknown factors exist in any phase, enforces
   interactive user sign-off at every phase gate, and coordinates companion skills (architecture-diagram,
@@ -30,7 +30,7 @@ You are an Principal AI Systems Architect, Spec-Driven Engineering Lead, and Dev
    - You **MUST NOT** transition between **Phase 1 $\rightarrow$ Phase 2**, **Phase 2 Spec Authoring $\rightarrow$ Phase 2 Code Implementation**, or **Phase 2 $\rightarrow$ Phase 3** without presenting the completed deliverables and obtaining explicit user approval via `ask_question`.
 3. **Full Governance & Skill Synchronization:**
    - Strictly enforce the three consolidated repository rules in [`_agents/rules/`](../../rules/):
-     - [`spec_driven_development.md`](../../rules/spec_driven_development.md) (`always_on` — 3-Phase AI-SDLC, SDD Cycle & 4-Step RCA Protocol)
+     - [`ai_sdlc_and_sdd_standards.md`](../../rules/ai_sdlc_and_sdd_standards.md) (`always_on` — 3-Phase AI-SDLC, SDD Cycle & 4-Step RCA Protocol)
      - [`google_adk_and_agent_runtime.md`](../../rules/google_adk_and_agent_runtime.md) (`model_decision` — Google ADK, Agent Runtime, Model-Driven Reasoning & Live Eval)
      - [`devops_security_and_quality_standards.md`](../../rules/devops_security_and_quality_standards.md) (`model_decision` — Cloud Run, CodeMender SAST, CI/CD, Unified `.env`, Terraform & IAM)
    - Coordinate companion skills at the right lifecycle stages:
@@ -44,13 +44,14 @@ You are an Principal AI Systems Architect, Spec-Driven Engineering Lead, and Dev
 
 ```mermaid
 flowchart TD
-    Start([Developer Request]) --> EntryCheck{Determine Entry Phase & Check Prerequisites}
+    Start([Developer Request / Activate ai-sdlc]) --> Init["Phase 0: Workspace Scaffolding (validate_sdlc_gate.py --init)<br/>Creates specs/ & docs/ in project root from examples/ if missing"]
+    Init --> EntryCheck{Determine Entry Phase & Check Prerequisites}
 
     subgraph P1 ["Phase 1: Inception (Intent Framing & Architecture)"]
         P1_1["1.1 Workspace & Brownfield Discovery (specs/baseline/)"]
         P1_2["1.2 Interactive Intent & Scope Elicitation (ask_question)"]
         P1_3["1.3 Dual-Runtime Architecture, ADK Topology & IAM/Ingress Framing"]
-        P1_4["1.4 Companion Skills Offer: architecture-diagram & gcp-cost-estimator"]
+        P1_4["1.4 Companion Skills Offer: architecture-diagram & gcp-cost-estimator (docs/)"]
         P1_1 --> P1_2 --> P1_3 --> P1_4
     end
 
@@ -77,7 +78,7 @@ flowchart TD
     P2_5 --> Gate2{"Gate 2: User Sign-Off via ask_question"}
 
     subgraph P3 ["Phase 3: Operation (Integrate & Deploy)"]
-        P3_1["3.1 Pre-Merge Gate: Static Analysis + CodeMender SAST + Unified .env Check"]
+        P3_1["3.1 Pre-Merge Gate: Static Analysis + CodeMender SAST (docs/) + Unified .env Check"]
         P3_2["3.2 Git Multi-Branch Integration (main/develop vs PR to prod)"]
         P3_3["3.3 Dual-Runtime Deploy: agents-cli deploy (Agent Runtime) + Cloud Build & Terraform (Cloud Run)"]
         P3_4["3.4 Post-Deploy Verification: /healthz Smoke Tests + Live agents-cli eval + Final specs/plan/ Sync"]
@@ -91,14 +92,63 @@ flowchart TD
 
 ---
 
+## Phase 0: Skill Activation & Workspace Scaffolding (`specs/` & `docs/`)
+
+The canonical templates and directory structures for `specs/` and `docs/` are packaged inside this skill under [`examples/specs/`](./examples/specs/) and [`examples/docs/`](./examples/docs/).
+
+**Whenever the `ai-sdlc` skill is activated on a project:**
+1. Immediately check if `<repo_root>/specs/` and `<repo_root>/docs/` exist in the project root.
+2. If either folder (or `specs/templates/sdd-template.md`) is missing, run the workspace initializer command to scaffold them into the project root without overwriting any existing project files:
+   ```bash
+   python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --init
+   ```
+3. This creates the following workspace structure in the project root:
+   - `specs/README.md` (Specification registry)
+   - `specs/templates/sdd-template.md` (Master Feature SDD template)
+   - `specs/templates/baseline-template.md` (Brownfield Baseline & Modernization Assessment template)
+   - `specs/baseline/` (Brownfield baseline specifications)
+   - `specs/features/` (Feature specifications & implementation plans)
+   - `specs/plan/` (Living execution progress reports)
+   - `docs/README.md` (Operational architecture, SAST, and cost report index)
+
+---
+
+## Phase-by-Phase Output Folder Map
+
+Every phase of `ai-sdlc` produces deterministic deliverables in specific repository directories:
+
+| Phase | Sub-Step / Deliverable | Target Output Folder in Project Root | File Naming Convention |
+| :--- | :--- | :--- | :--- |
+| **Skill Activation** | Workspace Scaffolding (`--init`) | `specs/` & `docs/` | Copies from `_agents/skills/ai_sdlc/examples/{specs,docs}/` |
+| **Phase 1: Inception** | Brownfield "As-Is" Discovery (if existing codebase) | `specs/baseline/` | `specs/baseline/system-overview.md` or `<subsystem>-baseline.md` |
+| **Phase 1: Inception** | Intent, Scope & Dual-Runtime Architecture Frame | `specs/features/` | `specs/features/SPEC-<YYYYMMDD>-<FEATURE>.md` *(Sections 1 & 2)* |
+| **Phase 1: Inception** | Visual Architecture Diagram (`architecture-diagram` skill) | `docs/` | `docs/<project>-architecture.md` & `docs/<project>-architecture.html` |
+| **Phase 1: Inception** | Cloud Cost Estimate (`gcp-cost-estimator` skill) | `docs/` | `docs/gcp_cost_estimate_<project>.md` |
+| **Phase 2: Execution** | Brownfield Baseline SDD & Characterization/PBT Suite | `specs/baseline/` & `tests/` | `specs/baseline/<subsystem>-baseline.md` & `tests/characterization/` |
+| **Phase 2: Execution** | Full SDD Contract & Step-by-Step Test Plan | `specs/features/` | `specs/features/SPEC-<YYYYMMDD>-<FEATURE>.md` *(Sections 1–8)* |
+| **Phase 2: Execution** | ADK Agents, Tools & Model Armor Callbacks (`agent_runtime`) | `app/` (or `agents/`) | `agent.py`, `tools/*.py`, `callbacks/*.py`, `agents-cli-manifest.yaml` |
+| **Phase 2: Execution** | Cloud Run Web UI & Streaming API Proxy (`cloud_run`) | `src/` & `server/` | React/Vite UI (`src/`), Express/FastAPI proxy + `/healthz` (`server/`) |
+| **Phase 2: Execution** | Unit Tests, Property-Based Tests (PBT) & Golden Eval Sets | `tests/` & `evals/` | `tests/unit/`, `tests/property/`, `evals/datasets/*.jsonl` |
+| **Phase 2: Execution** | Living Plan Progress Report & RCA Log | `specs/plan/` | `specs/plan/PROGRESS_REPORT_<YYYYMMDD>.md` & `specs/README.md` |
+| **Phase 3: Operation** | Pre-Build CodeMender SAST Audit Reports (`codemender` skill) | `docs/` | `docs/codemender-01-*.md` .. `03-*.md`, `codemender-security-audit-summary.md` |
+| **Phase 3: Operation** | CI/CD Pipeline, IaC & Unified Environment Config | Root & `terraform/` | `cloudbuild.yaml`, `.env.example`, `terraform/*.tf` |
+| **Phase 3: Operation** | Post-Deploy Verification, Smoke Tests & Live Eval Metrics | `specs/plan/` | Final update to `specs/plan/PROGRESS_REPORT_<YYYYMMDD>.md` |
+
+---
+
 ## Phase 1: Inception (Intent Framing & Architecture)
 
 **Objective:** Transform a high-level user request into a crystal-clear, ambiguity-free architectural frame before authoring formal code specifications.
 
-### Step 1.1: Workspace Inspection & Brownfield vs. Greenfield Discovery
-1. Inspect the repository structure (`specs/baseline/`, `specs/features/`, `specs/plan/`, `src/`, `server/`, `app/`, `terraform/`).
-2. Determine if the request creates a **Greenfield** capability or modifies an **Existing (Brownfield)** subsystem.
-3. If brownfield, check whether an up-to-date Baseline SDD exists in `specs/baseline/`. Note any undocumented existing components that will require Phase 0 Baseline reverse-engineering.
+### Step 1.1: Workspace Initialization & Two-Track Brownfield vs. Greenfield Discovery
+1. Run `python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --init` to ensure `specs/` and `docs/` are scaffolded in the project root, then inspect the repository structure.
+2. Determine if the request creates a **Greenfield** capability or modifies/modernizes an **Existing (Brownfield)** subsystem.
+3. **If Brownfield**, classify the existing codebase into one of two assessment tracks (or **Hybrid**) per [`references/brownfield_assessment_playbook.md`](./references/brownfield_assessment_playbook.md):
+   - **Track A — Legacy Enterprise / 3-Tier Application (e.g., `.NET Framework`, ASP.NET WebForms/MVC, WCF/SOAP, SQL Server):**
+     - Scan `*.sln`, `*.csproj`, `Web.config`/`App.config`, Presentation tier (`*.aspx`, `Controllers/`, stateful `Session`/`ViewState`), Business tier (`*.svc` WCF, class libraries, Windows Services), and Data tier (`*.edmx`, ADO.NET, SQL Stored Procedures `sp_*`/`usp_*` and Triggers).
+   - **Track B — Modern Cloud-Native Codebase Lacking Documentation & Testing (e.g., React/Node/Python/Go microservices, ad-hoc LLM/Agent code):**
+     - Scan existing frontend/backend routes, unvalidated DTOs/schemas, test coverage gaps, and governance anti-patterns (e.g., LLM agents coupled inside web servers, regex/keyword intent routing, missing `/healthz`, scattered `.env.*` files).
+4. Check whether an up-to-date Baseline SDD exists in `specs/baseline/`, and ask the user via `ask_question` to select the **Modernization Strategy** (*Strangler Fig / API Facade*, *Full Dual-Runtime Re-Architecture*, or *In-Place Cloud-Native Hardening*).
 
 ### Step 1.2: Interactive Intent & Requirement Elicitation (`ask_question`)
 Identify all unknown functional and domain parameters. Use the `ask_question` tool to clarify:
@@ -130,10 +180,11 @@ Frame the target system architecture strictly in compliance with repository gove
      - **Pattern 2: App-Level Google OAuth 2.0** with `run.googleapis.com/invoker-iam-disabled = "true"` + backend ID token verification — *Recommended for internal apps requiring user identity context*.
      - **Pattern 3: Direct Unauthenticated Ingress** with `run.googleapis.com/invoker-iam-disabled = "true"` and `INGRESS_TRAFFIC_ALL` on frontend only (backend remains private via `roles/run.invoker` for frontend SA) — *Recommended for public or friction-free internal web tools*.
 
-### Step 1.4: Companion Skills Orchestration (`architecture-diagram` & `gcp-cost-estimator`)
-Once the architecture is framed, use `ask_question` to ask the developer if they want to generate companion operational artifacts in `docs/` during Inception:
-- **Visual Architecture Diagram ([`architecture-diagram`](../architecture_diagram/SKILL.md)):** Read `_agents/skills/architecture_diagram/SKILL.md` and generate `docs/<project-name>-architecture.md` and interactive `docs/<project-name>-architecture.html`.
-- **Live Cloud Cost Estimation ([`gcp-cost-estimator`](../gcp_cost_estimator/SKILL.md)):** Read `_agents/skills/gcp_cost_estimator/SKILL.md`, elicit all workload sizing variables, query real-time pricing from the live Google Cloud Billing API (zero caching), and generate `docs/gcp_cost_estimate_<project_name>.md`.
+### Step 1.4: Companion Skills Orchestration (`architecture-diagram`, `codemender` & `gcp-cost-estimator`)
+Once the architecture is framed (especially in Brownfield assessments), use `ask_question` to offer companion operational artifacts in `docs/`:
+- **Visual Architecture Diagram ([`architecture-diagram`](../architecture_diagram/SKILL.md)):** Generate `docs/<project-name>-architecture.md` and interactive `docs/<project-name>-architecture.html` (showing **As-Is vs. Target Architecture** for brownfield workloads).
+- **Baseline SAST Security Audit ([`codemender`](../codemender/SKILL.md)):** For brownfield codebases, run `cm find` to audit legacy vulnerabilities (SQLi, hardcoded `Web.config` secrets, XSS) into `docs/codemender-01-vulnerability-scan-report.md`.
+- **Live Cloud Cost Estimation ([`gcp-cost-estimator`](../gcp_cost_estimator/SKILL.md)):** Elicit workload sizing variables, query real-time pricing from the live Google Cloud Billing API (zero caching), and generate `docs/gcp_cost_estimate_<project_name>.md`.
 
 ### Phase 1 $\rightarrow$ Phase 2 Interactive Gate (`Gate 1`)
 1. Run the gate validator script if applicable:
@@ -150,19 +201,29 @@ Once the architecture is framed, use `ask_question` to ask the developer if they
 
 ## Phase 2: Execution (The Spec-Driven Development Cycle)
 
-**Objective:** Translate the approved Inception frame into formal specifications, granular test-driven implementation plans, and verified production code strictly governed by **[`_agents/rules/spec_driven_development.md`](../../rules/spec_driven_development.md)**.
+**Objective:** Translate the approved Inception frame into formal specifications, granular test-driven implementation plans, and verified production code strictly governed by **[`_agents/rules/ai_sdlc_and_sdd_standards.md`](../../rules/ai_sdlc_and_sdd_standards.md)**.
 
 > [!IMPORTANT]
-> **Mandatory Rule Reference:** Read and enforce [`_agents/rules/spec_driven_development.md`](../../rules/spec_driven_development.md) throughout Phase 2. **Code is a downstream artifact derived from specification documents.** Never write production code before Step 2.3 user alignment is complete.
+> **Mandatory Rule Reference:** Read and enforce [`_agents/rules/ai_sdlc_and_sdd_standards.md`](../../rules/ai_sdlc_and_sdd_standards.md) throughout Phase 2. **Code is a downstream artifact derived from specification documents.** Never write production code before Step 2.3 user alignment is complete.
 
-### Step 2.0: Brownfield Baseline Discovery & Codification (Brownfield Only)
-If modifying an existing subsystem and `specs/baseline/` lacks a current baseline spec:
-1. Reverse-engineer the existing code, data models, API contracts, UI flows, external integrations, and system invariants.
-2. Author or update `specs/baseline/system-overview.md` and/or `specs/baseline/<subsystem>-baseline.md`.
-3. If any existing behavior appears broken or ambiguous during discovery, ask the user via `ask_question` whether it is an intentional baseline invariant or a defect to be fixed.
+### Step 2.0: Brownfield Baseline Discovery, Assessment & Safety-Net Codification (Brownfield Only)
+If modifying or modernizing an existing subsystem and `specs/baseline/` lacks a current baseline spec, follow [`references/brownfield_assessment_playbook.md`](./references/brownfield_assessment_playbook.md) and author `specs/baseline/system-overview.md` and/or `specs/baseline/<subsystem>-baseline.md` using `specs/templates/baseline-template.md` (scaffolded from [`examples/specs/templates/baseline-template.md`](./examples/specs/templates/baseline-template.md)):
+
+1. **Track A Assessment — Legacy Enterprise / 3-Tier Apps (`.NET Framework`, ASP.NET, WCF, SQL Server):**
+   - **3-Tier Dependency & State Inventory:** Map Presentation (`*.aspx`, MVC Views, stateful `Session`/`ViewState`), Business (`*.csproj`, WCF `.svc` SOAP contracts, Windows Services), and Data (`*.edmx`, ADO.NET) tiers.
+   - **Hidden Business Logic Extraction:** Extract implicit domain rules buried inside **SQL Stored Procedures (`sp_*`/`usp_*`), Triggers, Views**, UI code-behind handlers (`.aspx.cs`), and `Web.config`/`App.config` settings into Section 3.2 (*Hidden Business Logic Extraction Matrix*) of the Baseline SDD.
+   - **Identity & Config Mapping:** Map legacy `Web.config` connection strings/appSettings to the unified `.env` (`NONPROD_*` / `PROD_*`) and Windows/AD auth to Cloud Run IAM patterns (IAP / OAuth 2.0).
+2. **Track B Assessment — Modern Cloud-Native Code Lacking Docs & Tests:**
+   - **Implicit Contract Reverse-Engineering:** Extract undocumented REST/GraphQL/SSE route contracts, middleware side effects, and reconcile type drift between frontend TypeScript interfaces, backend Pydantic/ORM models, and database schemas.
+   - **Governance & Dual-Runtime Gap Matrix:** Audit the existing codebase against all 13 governance rules (detecting LLM agents coupled in web servers instead of `agent_runtime`, regex/keyword intent routing, missing `OTHERS` intent, mockup fallbacks, missing `/healthz`, or scattered `.env.*` files).
+3. **Interactive Ambiguity & Defect Triage (`ask_question`):**
+   - Whenever reverse-engineering uncovers undocumented quirks, dead code, or suspected bugs, **pause and use `ask_question`** to ask whether to lock the behavior in as a **Baseline Invariant** or flag it as a **Legacy Defect** to remediate in the Feature SDD.
+4. **Characterization Unit Tests + Property-Based Tests (PBT) Safety Net:**
+   - Before modifying or migrating any brownfield code, write **Characterization Unit Tests** (Golden Master input/output parity tests) and **Generative Property-Based Tests (PBT)** (`hypothesis` / `fast-check`) verifying the core baseline invariants documented in Section 6 of the Baseline SDD.
+
 
 ### Step 2.1: Feature Specification Authoring (`specs/features/`)
-Create or update `specs/features/SPEC-<YYYYMMDD>-<FEATURE_NAME>.md` using [`specs/templates/sdd-template.md`](../../../specs/templates/sdd-template.md):
+Create or update `specs/features/SPEC-<YYYYMMDD>-<FEATURE_NAME>.md` using `specs/templates/sdd-template.md` (scaffolded from [`examples/specs/templates/sdd-template.md`](./examples/specs/templates/sdd-template.md)):
 1. **Section 1 (Problem Statement & Objectives):** Populate from Phase 1 Inception outputs.
 2. **Section 2 (System Architecture & Component Interaction):** Document the Dual-Runtime table (`agent_runtime` vs `cloud_run`) and end-to-end Mermaid sequence diagram.
 3. **Section 3 (Data Models & Type Contracts):** Define exact TypeScript interfaces, Python Pydantic models, and database DDL schemas (single source of truth).
@@ -190,7 +251,7 @@ Execute the approved implementation plan sequentially, one step at a time:
 1. **Implement Step Code:** Write the production code strictly matching the SDD schemas and ADK/Cloud Run boundaries (zero hardcoded config values, zero regex routing, zero static fallback arrays).
 2. **Implement Unit Tests & Property-Based Tests (PBT):** Write and run the deterministic unit tests and generative PBT suites for the current step.
 3. **Run Live Agent Evaluations (for ADK steps):** Execute `agents-cli eval run` against live backends (zero offline mocks/stubs).
-4. **Enforce Mandatory 4-Step RCA Protocol on ANY Failure ([`spec_driven_development.md`](../../rules/spec_driven_development.md)):**
+4. **Enforce Mandatory 4-Step RCA Protocol on ANY Failure ([`ai_sdlc_and_sdd_standards.md`](../../rules/ai_sdlc_and_sdd_standards.md)):**
    - If **any** Unit Test, PBT counterexample, integration test, or `agents-cli eval` metric fails:
      - **STOP IMMEDIATELY.** Never apply quick patches, mockup fallback data, regex heuristics, or assertion weakening.
      - **RCA Step 1:** Perform deep root cause analysis across live data, ADK tool docstrings, model prompts, or schema contracts.
@@ -299,9 +360,12 @@ Before running security scans, Git operations, or cloud deployments, check for a
 
 ## Helper Script & Validation Utility
 
-Use the bundled gate validation script to check artifact completeness and governance compliance at each phase boundary:
+Use the bundled gate validation script to scaffold `specs/` & `docs/` on activation and check artifact completeness at each phase boundary:
 
 ```bash
+# Scaffold specs/ and docs/ into the project root upon skill activation
+python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --init
+
 # Validate Phase 1 (Inception) readiness
 python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --phase inception
 
@@ -311,14 +375,19 @@ python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --phase execution
 # Validate Phase 3 (Operation / Deploy) readiness
 python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --phase operation
 
-# Run full 3-phase AI-SDLC audit
-python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --phase all
+# Run full 3-phase AI-SDLC audit (can combine with --init)
+python3 _agents/skills/ai_sdlc/scripts/validate_sdlc_gate.py --init --phase all
 ```
 
 ---
 
 ## Reference Documentation & Examples
 
+- [Brownfield Assessment Playbook (Track A: Legacy .NET/3-Tier & Track B: Modern Cloud-Native)](./references/brownfield_assessment_playbook.md)
 - [Phase Questionnaires & Gate Checklists](./references/phase_questionnaires_and_checklists.md)
 - [SDD & Governance Rules Integration Matrix](./references/sdd_and_rules_integration_matrix.md)
 - [End-to-End AI-SDLC Sample Walkthrough](./examples/sample_ai_sdlc_walkthrough.md)
+- [Example `specs/` Template Directory](./examples/specs/README.md), [Master Feature SDD Template](./examples/specs/templates/sdd-template.md) & [Brownfield Baseline Template](./examples/specs/templates/baseline-template.md)
+- [Example `docs/` Template Directory](./examples/docs/README.md)
+
+

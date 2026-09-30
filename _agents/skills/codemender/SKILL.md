@@ -74,14 +74,26 @@ Before initiating security scans, ensure the workstation and Google Cloud projec
 
 ## Phase 1: Vulnerability Discovery (`cm find`)
 
-Scan the codebase to discover potential security weaknesses (e.g., SQLi, Command Injection, SSRF, IDOR, XSS, Path Traversal, Insecure Deserialization).
+Scan the codebase to discover potential security weaknesses (e.g., SQLi, Command Injection, SSRF, IDOR, XSS, Path Traversal, Insecure Deserialization, Prompt Injection / Missing Model Armor hooks, and IAM misconfigurations).
 
-### 1. Execution:
+### 1. Execution & Architecture-Specific Steering Presets (`-c`):
 Run a non-interactive scan on the target path or directory:
 ```bash
 cm find <target_path> -y --bypass-warning --verbose
 ```
-*Optional Context*: Pass `-c "Focus on payment gateway and auth session paths"` to steer the scanner.
+Use `-c "<context>"` to steer CodeMender based on the workload track:
+- **Preset A — Google ADK Agents & `FunctionTool` Registries (`agent_runtime`):**
+  ```bash
+  cm find app/ -y --bypass-warning -c "Focus on ADK FunctionTool input validation, SQLi/SSRF in tool callables, missing before_agent_callback Model Armor interception, and unvalidated external API responses"
+  ```
+- **Preset B — Cloud Run Web UI, Streaming Proxy & Terraform IaC (`cloud_run`):**
+  ```bash
+  cm find . -y --bypass-warning -c "Focus on Cloud Run streaming proxy auth token verification, CORS/XSS, hardcoded secrets outside .env, and prohibited allUsers/allAuthenticatedUsers in terraform/*.tf"
+  ```
+- **Preset C — Brownfield Legacy Enterprise (`.NET Framework` / 3-Tier / SQL Stored Procs):**
+  ```bash
+  cm find . -y --bypass-warning -c "Focus on raw ADO.NET SQL concatenate injection, dynamic SQL in Stored Procedures, hardcoded credentials in Web.config/App.config, insecure WCF SOAP bindings, and BinaryFormatter/ViewState deserialization"
+  ```
 
 ### 2. Mandatory Report Generation:
 Generate or update **`docs/codemender-01-vulnerability-scan-report.md`** containing:
@@ -127,9 +139,9 @@ Use the `ask_question` tool to request confirmation before generating code fixes
 
 ---
 
-## Phase 3: Automated Remediation & Patching (`cm fix`)
+## Phase 3: Automated Remediation, Patching & SDD/PBT Verification (`cm fix`)
 
-Generate secure, minimal, regression-tested patches for confirmed vulnerabilities.
+Generate secure, minimal, regression-tested patches for confirmed vulnerabilities and verify them against SDD specifications and Property-Based Tests.
 
 ### 1. Execution:
 For each target finding ID:
@@ -138,22 +150,22 @@ cm fix <finding_id> -y --bypass-warning --verbose
 ```
 *The CodeMender agent analyzes the code context, replaces vulnerable code patterns with secure constructs (e.g., parameterized queries, strict input allowlists), and runs project build/test suites inside the sandbox to ensure zero functional regressions.*
 
-### 2. Capture Patch Evidence:
-Inspect the local repository diff:
-```bash
-git diff
-git status --short
-```
+### 2. Mandatory Post-Patch SDD, Unit, PBT & Live Eval Verification:
+Immediately after `cm fix` applies a patch:
+1. **Inspect Diff:** Run `git diff` and `git status --short` to verify zero quick-fix anti-patterns (no hardcoded mockups or regex hacks).
+2. **Run Unit & Property-Based Tests (PBT):** Execute the repository's deterministic Unit Tests and generative Property-Based Tests (`hypothesis` / `fast-check`) to confirm the security patch preserves all mathematical/domain invariants. If any test fails, follow the **Mandatory 4-Step RCA Protocol** ([`ai_sdlc_and_sdd_standards.md`](../../rules/ai_sdlc_and_sdd_standards.md)).
+3. **Run Live Agent Evaluation (if `app/` or tools were modified):** Run `agents-cli eval run` to verify 100% security guardrail efficacy and $\ge 95\%$ tool trajectory accuracy.
+4. **Living Spec Sync (`specs/`):** If the security remediation altered an API schema, error status code, auth header, or `FunctionTool` signature, update the corresponding specification in `specs/features/` or `specs/baseline/` so there is **zero spec drift**.
 
 ### 3. Mandatory Report Generation:
 Generate or update **`docs/codemender-03-remediation-report.md`** (or `docs/codemender-03-remediation-<finding_id>-report.md`) containing:
 - **Remediation Summary**: Finding ID, Vulnerability Type, Target File.
 - **Code Diff (`git diff`)**: Side-by-side or unified diff illustrating the exact secure code transformation.
-- **Regression Test Validation**: Output of test suites run during fix verification.
+- **Unit, PBT & Live Eval Regression Validation**: Output of deterministic unit tests, property-based tests, and `agents-cli eval` suites run during fix verification, plus any synchronized `specs/` files.
 - **Deployment & Review Checklist**: Guidelines for code review and production promotion.
 
 ### 4. Human-in-the-Loop Confirmation:
-Present the patch diff to the user.
+Present the patch diff and test results to the user.
 Use the `ask_question` tool to determine next steps:
 - Option 1: "(Recommended) Accept patch, stage changes, and commit to local Git branch."
 - Option 2: "Keep uncommitted changes in working tree for manual testing."
@@ -164,16 +176,16 @@ Use the `ask_question` tool to determine next steps:
 ## Phase 4: Consolidated Security Audit Summary
 
 Once remediation steps are completed, generate a single master document:
-**`docs/codemender-security-audit-summary.md`**
+**`docs/codemender-security-audit-summary.md`** (and record the security gate completion in `specs/plan/PROGRESS_REPORT_<YYYYMMDD>.md`).
 
 This consolidated report aggregates:
-1. **Executive Security Dashboard**: Pre-scan vs Post-remediation vulnerability posture.
-2. **Audit Trail**: Chronological record of scans, verifications, and patches applied.
+1. **Executive Security Dashboard**: Pre-scan vs Post-remediation vulnerability posture (enforcing **Zero Critical/High Vulnerabilities** before deployment).
+2. **Audit Trail**: Chronological record of scans, verifications, patches applied, and Unit/PBT regression pass rates.
 3. **Links to Detailed Phase Reports**:
    - [01: Vulnerability Scan Report](./codemender-01-vulnerability-scan-report.md)
    - [02: Verification & Triage Report](./codemender-02-verification-report.md)
    - [03: Remediation & Patch Report](./codemender-03-remediation-report.md)
-4. **Residual Risk & Architecture Hardening Recommendations**: Additional defense-in-depth guidance (WAF rules, CSP headers, IAM least-privilege, CI/CD automated scanning).
+4. **Residual Risk & Architecture Hardening Recommendations**: Additional defense-in-depth guidance (Model Armor policies, Cloud Armor WAF rules, IAP, IAM least-privilege, CI/CD automated scanning).
 
 ---
 

@@ -6,7 +6,7 @@ description: "Load and enforce this rule whenever configuring Git branches, runn
 # Rule: DevOps, Quality, Security & Cloud Architecture Standards
 
 ## Core Mandate
-In addition to the 3-Phase AI-SDLC and Spec-Driven Development (SDD) ([`spec_driven_development.md`](./spec_driven_development.md)), all software engineering, repository management, CI/CD pipeline automation, and cloud deployments must strictly adhere to the following 10 fundamental rules:
+In addition to the 3-Phase AI-SDLC and Spec-Driven Development (SDD) ([`ai_sdlc_and_sdd_standards.md`](./ai_sdlc_and_sdd_standards.md)), all software engineering, repository management, CI/CD pipeline automation, and cloud deployments must strictly adhere to the following 10 fundamental rules:
 
 ---
 
@@ -63,16 +63,17 @@ In addition to the 3-Phase AI-SDLC and Spec-Driven Development (SDD) ([`spec_dri
 
 ---
 
-## Rule 6: Cloud Run Observability (Web Applications, API Proxies, Liveness Probes, Logging & Monitoring)
-1. **Target Workloads on Cloud Run:**
-   - **Google Cloud Run** is the dedicated runtime for web frontend applications (React/Vite), API gateways, and thin streaming reverse proxies. Conversational AI agent reasoning engines are decoupled and hosted on the **Gemini Enterprise Agent Platform (`agent_runtime`)** (`_agents/rules/google_adk_and_agent_runtime.md`).
-2. **Liveness & Health Probes:**
-   - Applications running on Cloud Run must expose a dedicated health endpoint (`/healthz` or `/api/health`).
-   - Cloud Run service configuration must declare a **Liveness Probe** (and Startup Probe if required) pointing to this endpoint to detect unresponsiveness and auto-restart failed containers.
-3. **Cloud Logging:**
-   - Application logs must output structured JSON or standard log streams to stdout/stderr.
-   - Cloud Logging must capture all request logs, AI model proxy latencies, and error stack traces.
-4. **Cloud Monitoring:**
+## Rule 6: Cloud Run Observability, Container Hardening & Streaming Proxy Standards
+1. **Target Workloads & Streaming Reverse Proxy on Cloud Run:**
+   - **Google Cloud Run** is the dedicated runtime for web frontend applications (React/Vite), API gateways, and thin streaming reverse proxies (`server/`). Conversational AI agent reasoning engines are decoupled and hosted on the **Gemini Enterprise Agent Platform (`agent_runtime`)** ([`google_adk_and_agent_runtime.md`](./google_adk_and_agent_runtime.md)).
+   - **Streaming Proxy Configuration:** Cloud Run proxies forwarding SSE/WebSocket conversational streams from `agent_runtime` must configure explicit request timeouts (e.g., `timeout = "300s"` to `"900s"`), disable response buffering (`X-Accel-Buffering: no`, `Cache-Control: no-cache`), and remain strictly stateless (propagating `session_id` and verified user identity headers to `agent_runtime`).
+2. **Container & Dockerfile Hardening:**
+   - All Dockerfiles must use multi-stage builds, pin minimal/distroless base images, and execute the runtime process as a **non-root user (`USER nonroot` / UID $\ge 1000$)**.
+3. **Liveness & Health Probes:**
+   - Applications running on Cloud Run must expose a dedicated health endpoint (`/healthz` or `/api/health`) verifying downstream readiness.
+   - Cloud Run service configuration must declare a **Liveness Probe** (and Startup Probe) pointing to this endpoint to detect unresponsiveness and auto-restart failed containers.
+4. **Cloud Logging & Monitoring:**
+   - Application logs must output structured JSON to `stdout`/`stderr` including `trace`, `spanId`, `session_id`, and `agent_runtime` invocation latency.
    - Configure Cloud Monitoring dashboards and alert policies for container health, CPU/memory utilization, request latency (p95/p99), 5xx error rates, and Gemini API quota consumption.
 
 ---
@@ -87,25 +88,26 @@ In addition to the 3-Phase AI-SDLC and Spec-Driven Development (SDD) ([`spec_dri
 
 ---
 
-## Rule 8: Centralized Multi-Environment `.env` Parameter Management (Unified Single File)
+## Rule 8: Centralized Multi-Environment `.env` Parameter Management & Secret Manager Boundary
 1. **Zero Hardcoding:** No configurable parameters may be hardcoded in application source code, Dockerfiles, or client-side scripts.
 2. **Unified Multi-Environment Configuration File:**
-   - Parameters for **both Non-Prod and Prod environments** must be maintained in the **same unified `.env` file** (with a documented template in `.env.example`).
+   - Non-sensitive configuration parameters for **both Non-Prod and Prod environments** must be maintained in the **same unified `.env` file** (with a documented template in `.env.example`).
    - The `.env` file structure organizes variables into:
      - **Shared / Core Section:** Base settings common to all environments (e.g., `GCP_PROJECT`, `GCP_REGION`, `GENAI_LOCATION`, `DEFAULT_MODEL`, `ARTIFACT_REGISTRY_REPO`, `GITHUB_REPO`).
-     - **Non-Prod Configuration Block (`NONPROD_*`):** Non-prod specific values (e.g., `NONPROD_ENVIRONMENT_NAME=development`, `NONPROD_FRONTEND_SERVICE_NAME`, `NONPROD_BACKEND_SERVICE_NAME`, `NONPROD_DEPLOYMENT_ID`, `NONPROD_MIN_INSTANCES=0`, `NONPROD_MAX_INSTANCES=5`, service accounts).
-     - **Prod Configuration Block (`PROD_*`):** Prod specific values (e.g., `PROD_ENVIRONMENT_NAME=production`, `PROD_FRONTEND_SERVICE_NAME`, `PROD_BACKEND_SERVICE_NAME`, `PROD_DEPLOYMENT_ID`, `PROD_MIN_INSTANCES=1`, `PROD_MAX_INSTANCES=10`, service accounts).
+     - **Non-Prod Configuration Block (`NONPROD_*`):** Non-prod specific values (e.g., `NONPROD_ENVIRONMENT_NAME=development`, `NONPROD_FRONTEND_SERVICE_NAME`, `NONPROD_BACKEND_SERVICE_NAME`, `NONPROD_AGENT_RESOURCE_NAME`, `NONPROD_DEPLOYMENT_ID`, `NONPROD_MIN_INSTANCES=0`, `NONPROD_MAX_INSTANCES=5`, service accounts).
+     - **Prod Configuration Block (`PROD_*`):** Prod specific values (e.g., `PROD_ENVIRONMENT_NAME=production`, `PROD_FRONTEND_SERVICE_NAME`, `PROD_BACKEND_SERVICE_NAME`, `PROD_AGENT_RESOURCE_NAME`, `PROD_DEPLOYMENT_ID`, `PROD_MIN_INSTANCES=1`, `PROD_MAX_INSTANCES=10`, service accounts).
    - CI/CD pipelines, build scripts, and local runners resolve the appropriate configuration block dynamically based on the active Git branch or target environment selection.
-3. **Secret Isolation:**
-   - Sensitive credentials (e.g., API keys, service account keys) must NEVER be committed to GitHub.
-   - Local development uses `.env` (ignored by `.gitignore`).
-   - Cloud environments supply configuration via Cloud Build substitutions, Cloud Run environment variables, or Google Cloud Secret Manager.
+3. **Secret Isolation & Google Cloud Secret Manager Boundary:**
+   - Sensitive credentials (database passwords, OAuth client secrets, external API keys) must NEVER be committed to GitHub or passed in plaintext in `cloudbuild.yaml` / `.tf` files.
+   - Local development uses `.env` (strictly ignored by `.gitignore`).
+   - In Cloud Run and Agent Runtime, sensitive secrets must be stored in **Google Cloud Secret Manager** and injected at runtime via `secret_key_ref` (Terraform) with `roles/secretmanager.secretAccessor` granted only to the workload's dedicated Service Account.
 
 ---
 
-## Rule 9: Multi-Environment IaC & Deployment via Terraform & Google Cloud Infrastructure Manager
-1. **Infrastructure as Code (IaC):**
-   - Cloud infrastructure resources (Cloud Run services, Artifact Registry repositories, IAM roles, service accounts, monitoring alerts) are declaratively codified in **Terraform** (`terraform/` directory), parameterized to support multiple environment deployments from a single codebase.
+## Rule 9: Multi-Environment IaC & Least-Privilege IAM via Terraform & Infrastructure Manager
+1. **Infrastructure as Code (IaC) & Dedicated Service Accounts:**
+   - Cloud infrastructure resources (Cloud Run services, Artifact Registry repositories, Secret Manager references, IAM roles, service accounts, monitoring alerts) are declaratively codified in **Terraform** (`terraform/` directory), parameterized to support multiple environment deployments from a single codebase.
+   - **Strict Least-Privilege Service Accounts:** Every Cloud Run service and Agent Runtime workload must run under a dedicated, environment-scoped Service Account (`<service>-nonprod-sa@...`, `<service>-prod-sa@...`). Using the default Compute Engine Service Account (`*-compute@developer.gserviceaccount.com`) or granting primitive roles (`roles/editor`, `roles/owner`) is strictly prohibited.
 2. **Independent Infrastructure Manager Deployments:**
    - Non-Prod and Prod environments are provisioned as independent **Google Cloud Infrastructure Manager** deployments (e.g., `<service>-nonprod` vs `<service>-prod`, or `app-nonprod` vs `app-prod`), ensuring complete isolation of Terraform state, service lifecycle, and scaling profiles.
 3. **Reproducible & Tracked Deployments:**
