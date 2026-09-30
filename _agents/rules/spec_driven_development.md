@@ -1,169 +1,127 @@
 ---
 trigger: always_on
-description: "Strictly enforce Spec-Driven Development (SDD) with mandatory brownfield baseline, detailed implementation plans, unit + property-based testing at every step, and continuous plan progress tracking in specs/plan/."
+description: "Core always-on engineering rule enforcing the 3-Phase AI-Driven Software Development Lifecycle (AI-SDLC) via the ai-sdlc skill, proactive ask_question clarification on unknowns, Spec-Driven Development (SDD) with brownfield baselines and Unit/Property-Based Testing at every step, and the mandatory 4-Step Root Cause Investigation (RCA) protocol."
 ---
 
-# Rule: Spec-Driven Development (SDD), Brownfield Protocol & Plan Progress Tracking
+# Rule: 3-Phase AI-SDLC, Spec-Driven Development (SDD) & Root Cause Investigation Standard
 
 ## Core Mandate
-This project operates strictly under the **Spec-Driven Development (SDD)** process.
-**Code is a downstream artifact derived from specification documents.** No feature implementation, architectural change, major refactoring, or API modification may begin without:
-1. An approved, up-to-date Specification Document (SDD) stored under `specs/`.
-2. A detailed **Implementation Plan** breaking down changes into concrete steps.
-3. Dedicated **Unit Tests** and **Property-Based Tests (PBT)** defined for every implementation step.
-4. Continuous **Plan Progress Tracking** documented under `specs/plan/`.
+All software engineering, architectural design, feature development, refactoring, testing, bug fixing, and cloud/agent deployments in this repository **MUST strictly follow the 3-Phase AI-Driven Software Development Lifecycle (AI-SDLC)** orchestrated by the **[`ai-sdlc` skill](../skills/ai_sdlc/SKILL.md)**:
+
+1. **Phase 1: Inception (Intent Framing & Architecture)**
+2. **Phase 2: Execution (The Spec-Driven Development Cycle)**
+3. **Phase 3: Operation (Repository Integration, Security Gates & Dual-Runtime Deployment)**
+
+Whenever a user initiates or continues a project, feature, architectural change, bug fix, or deployment, the agent **MUST immediately load and follow [`_agents/skills/ai_sdlc/SKILL.md`](../skills/ai_sdlc/SKILL.md)**, and load the relevant domain rules:
+- **Conversational AI Agents (`agent_runtime`):** [`_agents/rules/google_adk_and_agent_runtime.md`](./google_adk_and_agent_runtime.md)
+- **Cloud Run, CI/CD, SAST & IaC (`cloud_run`):** [`_agents/rules/devops_security_and_quality_standards.md`](./devops_security_and_quality_standards.md)
 
 ---
 
-## 1. Brownfield Development Protocol (Mandatory Baseline First)
+## 1. Mandatory Zero-Assumption Clarification & Phase Gate Protocol
 
+Across **every phase** of the AI-SDLC (Inception, Execution, and Operation):
+
+1. **Zero Silent Assumptions (`ask_question` Mandate):**
+   - The agent **MUST NEVER** guess, invent, or silently assume unknown business requirements, target personas, brownfield behaviors, data model fields, API error contracts, IAM/Ingress patterns, workload sizing parameters, or target deployment environments.
+   - Whenever any factor is ambiguous, underspecified, or missing, the agent **MUST pause and use the `ask_question` tool** (presenting clear choices with `(Recommended)` options and trade-offs) before proceeding.
+2. **Strict Interactive Phase Gates:**
+   - The agent **MUST NOT** automatically transition from **Phase 1 (Inception) $\rightarrow$ Phase 2 (Execution)**, from **Phase 2 Spec Authoring $\rightarrow$ Phase 2 Code Implementation**, or from **Phase 2 (Execution) $\rightarrow$ Phase 3 (Operation)** without presenting the completed phase artifacts and obtaining **explicit user sign-off via `ask_question`**.
+
+```
++===================================================================================+
+|                     PHASE 1: INCEPTION (Intent Framing & Architecture)            |
+|  - Elicit business intent, personas, goals/non-goals, greenfield vs. brownfield   |
+|  - Check/discover brownfield baseline in specs/baseline/                          |
+|  - Define Dual-Runtime Split: Agent Platform (agent_runtime) vs Cloud Run         |
+|  - Define ADK Agent Hierarchy, Canonical Intent Topology & IAM/Ingress Pattern    |
+|  - Offer companion skills: architecture-diagram (docs/) & gcp-cost-estimator      |
++===================================================================================+
+                                         │
+                        [Interactive Gate 1: ask_question Sign-Off]
+                                         ▼
++===================================================================================+
+|                  PHASE 2: EXECUTION (Spec-Driven Development Cycle)               |
+|  - SDD Step 0: Codify Brownfield Baseline (specs/baseline/) if applicable         |
+|  - SDD Step 1: Author Feature Specification (specs/features/SPEC-YYYYMMDD-*.md)   |
+|  - SDD Step 2: Granular Implementation Plan + Unit Tests + PBT + Live Agent Eval  |
+|  - SDD Step 3: Stakeholder Review & Alignment Sub-Gate (ask_question sign-off)    |
+|  - SDD Step 4: Step-by-Step Code & Test Execution (4-Step RCA on any red test)    |
+|  - SDD Step 5: Verification, Living Spec Sync & Progress Report (specs/plan/)     |
++===================================================================================+
+                                         │
+                        [Interactive Gate 2: ask_question Sign-Off]
+                                         ▼
++===================================================================================+
+|                PHASE 3: OPERATION (Repository Integration & Deployment)           |
+|  - Pre-Merge Gate: Static Analysis + CodeMender SAST (cm find/verify/fix) + .env  |
+|  - Repo Integration: Multi-branch Git (main/develop -> PR to prod), clean tree    |
+|  - Dual-Runtime Deploy:                                                           |
+|      1) ADK Agents -> Gemini Enterprise Agent Platform (agents-cli deploy)        |
+|      2) Web UI / API Proxy -> Cloud Build + Terraform Infra Manager -> Cloud Run  |
+|  - Post-Deploy Gate: Live /healthz & smoke tests, live agents-cli eval run        |
+|    (>=95% precision, 1.000 groundedness), Observability check, specs/plan/ sync   |
++===================================================================================+
+```
+
+---
+
+## 2. Spec-Driven Development (SDD) & Brownfield Protocol (Phase 2)
+
+**Code is a downstream artifact derived from specification documents.** No feature implementation, architectural change, refactoring, or API modification may begin without an approved Specification Document under `specs/`.
+
+### 2.1 Brownfield Development Protocol (Mandatory Baseline First)
 When working on an existing (brownfield) codebase or modifying any existing subsystem:
+1. **Check for Baseline SDD:** Verify if an accurate Baseline SDD exists in `specs/baseline/` for the targeted component.
+2. **Reverse-Engineer Baseline First:** If missing or outdated, inspect existing code, schemas, and APIs to generate a complete Baseline SDD under `specs/baseline/` (`system-overview.md` or `<subsystem>-baseline.md`) documenting the "as-is" architecture, data models, API contracts, business logic, external integrations, and core system invariants.
+3. **Clarify Baseline Unknowns:** If any existing behavior is ambiguous or appears defective during discovery, pause and ask the user via `ask_question` whether to codify it as a baseline invariant or remediate it in the feature spec.
+4. **Baseline Before Delta:** Only after `specs/baseline/` is established may feature specs (`specs/features/`) be drafted against it.
 
-1. **Check for Baseline SDD:**
-   - Before writing or modifying any code, verify if a comprehensive Baseline SDD exists in `specs/baseline/` for the targeted component/system.
-2. **Reverse-Engineer / Generate Baseline SDD First:**
-   - If no Baseline SDD exists (or if it is out-of-date), you **MUST** inspect the existing code, dependencies, data contracts, and APIs to generate a complete Baseline SDD first.
-   - The Baseline SDD must accurately document the "as-is" state:
-     - Architecture and subsystem boundaries
-     - Data models and TypeScript / Python types / schemas
-     - API endpoints, payloads, headers, and error behaviors
-     - Business logic, algorithms, and domain constraints
-     - UI/UX workflows and component hierarchy
-     - External service integrations (e.g., Gemini API, Vertex AI, Google Cloud)
-     - Core system invariants to be protected by property tests
-3. **Establish Baseline Before Delta:**
-   - Only after the baseline state is codified into `specs/baseline/` can feature specs or modification plans (`specs/features/`) be drafted against it.
+### 2.2 SDD Authoring & Step-by-Step Implementation Plan
+1. **Feature Specification (`specs/features/SPEC-<YYYYMMDD>-<TITLE>.md`):**
+   - Author using [`specs/templates/sdd-template.md`](../../specs/templates/sdd-template.md) covering: (1) Problem Statement & Goals/Non-Goals, (2) Dual-Runtime Architecture & Sequence Diagram, (3) Data Models & Type Contracts, (4) API & `FunctionTool` Contracts, (5) UI/UX State Machines, (6) Governance Checklist, (7) Step-by-Step Implementation Plan & Test Design, and (8) Plan Progress Tracking.
+2. **Mandatory Testing Standards for EVERY Implementation Step:**
+   - **Deterministic Unit Tests:** Concrete examples testing happy paths, boundary conditions, malformed payloads, and error handling.
+   - **Generative Property-Based Tests (PBT):** Mathematical and logical invariants verified across randomized/fuzzed input spaces using `fast-check` (TypeScript/JS) or `hypothesis` (Python) (e.g., serialization round-tripping, canonical intent enum membership, security callback interception, state reducer invariants).
+   - **Live Environment Agent Evaluation (`agents-cli eval`):** For ADK agent steps, evaluate against live backends verifying $\ge 95\%$ tool selection precision and $1.000$ ($100\%$) groundedness (see [`google_adk_and_agent_runtime.md`](./google_adk_and_agent_runtime.md)).
+3. **Pre-Code Stakeholder Alignment Sub-Gate:**
+   - Review the authored SDD and step-by-step test plan with the user and obtain explicit approval via `ask_question` before writing production code.
 
----
-
-## 2. SDD Workflow Lifecycle
-
-Every development task must progress through these sequential phases:
-
-```
-[Phase 0: Baseline Discovery (Brownfield only)]
-               │
-               ▼
-[Phase 1: Specification Authoring (SDD)]
-               │
-               ▼
-[Phase 2: Detailed Implementation Plan + Test Strategy]
-               │
-               ▼
-[Phase 3: Review & Alignment]
-               │
-               ▼
-[Phase 4: Step-by-Step Implementation + Unit & Property Tests]
-               │
-               ▼
-[Phase 5: Verification, Living Spec Sync & Plan Progress Tracking]
-```
-
-### Phase 0: Baseline Discovery (Brownfield only)
-- Inspect existing files, configuration, models, and tests.
-- Document current behavior, contracts, and invariants in `specs/baseline/`.
-
-### Phase 1: Specification Authoring
-- Create or update the relevant spec under `specs/features/` or `specs/` using `specs/templates/sdd-template.md`.
-- Required sections:
-  1. Problem Statement & Goals / Non-Goals
-  2. System Architecture & Component Interactions
-  3. Data Models & Schema Definitions (Single source of truth)
-  4. API Contracts & Integrations (Request/Response, status codes, error shapes)
-  5. UI/UX & Behavioral Specifications (State machines, edge cases, validation)
-  6. Security, Privacy & Non-Functional Requirements
-
-### Phase 2: Detailed Implementation Plan & Test Design
-Before writing production code, author a granular **Implementation Plan** in the SDD with:
-- **Sequential Step Breakdown:** Clear, manageable steps from foundational models/types to backend APIs, UI components, and integrations.
-- **Unit Tests for Every Step:** Specific, deterministic test cases covering expected behavior, edge cases, and error paths.
-- **Property-Based Tests (PBT) for Every Step:** Formal mathematical/logical invariants tested across randomized, fuzzed, or generative inputs (e.g. with `fast-check` in TS/JS or `hypothesis` in Python).
-- **Completion Criteria:** Definition of Done for each individual step.
-
-### Phase 3: Review & Alignment
-- Review the proposed specification, step-by-step implementation plan, and test designs with the user/stakeholders.
-- Resolve ambiguities, edge cases, and design trade-offs *in the document* before writing code.
-
-### Phase 4: Step-by-Step Implementation
-- Execute the implementation plan step-by-step.
-- For each step:
-  1. Implement the step code and its required types/contracts.
-  2. Implement the accompanying Unit Tests.
-  3. Implement the accompanying Property-Based Tests.
-  4. Run and verify that all tests pass before proceeding to the next step.
-
-### Phase 5: Verification, Living Spec Sync & Plan Progress Tracking
-- Run the complete test suite (all unit tests, property tests, and evaluation benchmarks).
-- Verify against every Acceptance Criterion in the SDD.
-- Synchronize any spec modifications to prevent spec drift.
-- **Update Plan Progress:** Author or update the execution progress report in `specs/plan/` documenting completed milestones, test metrics, and next steps.
+### 2.3 Living Specs & Plan Progress Tracking (`specs/plan/`)
+1. **Zero Spec Drift:** Whenever code contracts, schemas, or behaviors change, update the corresponding SDD in `specs/` in the same change.
+2. **Living Plan Progress Reports (`specs/plan/PROGRESS_REPORT_<YYYYMMDD>.md`):**
+   - Continuously record linked SDD IDs, step-by-step completion matrices, unit/PBT/live-eval pass metrics, architectural decisions, RCA logs, and next actions.
+   - Always update `specs/plan/` and synchronize `specs/README.md` before pausing development or transitioning between phases.
 
 ---
 
-## 3. Plan Progress Tracking Protocol (`specs/plan/`)
+## 3. Mandatory 4-Step Root Cause Investigation (RCA) & Zero Quick-Patch Standard
 
-All execution progress must be continuously recorded in the `specs/plan/` directory:
+When **any** test fails (**Agent Evaluation (`agents-cli eval`)**, **Property-Based Tests (PBT)**, **Unit Tests**, or **Integration/Smoke Tests**), or when a user reports a defect or requests a bug fix:
 
-1. **Progress Report Requirements:**
-   - **Specification Linkage:** State the associated SDD document ID (e.g., `SPEC-20260824-MULTI-AGENT-CLOUD-ARCHITECTURE.md`).
-   - **Step-by-Step Progress Matrix:** Detailed table tracking completed vs pending steps, implemented files, and test suites.
-   - **Quality & Test Metrics:** Up-to-date summary of test pass rates (Unit, PBT, Golden Benchmarks), execution latency, and invariant verification.
-   - **Delivered Capabilities:** Non-obvious architectural decisions, model integrations, security guardrails, and UI enhancements.
-   - **Roadmap & Next Actions:** Concrete, actionable next steps when resuming development.
-2. **Milestone & Pause Synchronization:**
-   - Whenever development is paused, handed off, or a major phase completes, the agent **MUST** update `specs/plan/` and synchronize `specs/README.md` before concluding the session.
+**DEVELOPERS AND AI AGENTS ARE STRICTLY PROHIBITED FROM APPLYING QUICK FIXES, MOCKUP FALLBACK DATA, REGEX PATCHES, OR RULE-BASED CODE WORKAROUNDS.**
 
----
+### 3.1 Strictly Prohibited Anti-Patterns (The "Quick-Fix" Trap)
+1. ❌ **Mockup Data & Fallback Dictionaries:** Injecting synthetic fallback dictionaries or offline mockup data into application code to bypass missing/inconsistent database records (e.g., `if not db_result: return {"id": "ITEM-123"}`).
+2. ❌ **Rule-Based Quick Patching & Special-Casing:** Writing prompt-specific `if/else` checks or hardcoding special-case answers for specific test inputs.
+3. ❌ **Regex & Keyword Heuristics in Agents:** Adding regex matching or substring heuristics to patch agent intent classification or routing errors.
+4. ❌ **Assertion Weakening / Test Deletion:** Modifying test assertions, deleting failing test cases, or widening tolerances simply to make a red test turn green.
+5. ❌ **Hardcoding Domain Constants in Code:** Storing business rules, operational limits, or entity definitions in code constants instead of querying the live systems of record.
 
-## 4. Mandatory Testing Standards for Every Step
-
-For **every step** in the implementation plan:
-
-### 4.1 Unit Testing Requirements
-- **Deterministic Examples:** Test concrete inputs and verified expected outputs.
-- **Boundary & Edge Conditions:** Empty sets, max limits, malformed payloads, network timeout errors.
-- **Mocking & Isolation:** Isolate external services to ensure fast, reliable test execution.
-
-### 4.2 Property-Based Testing (PBT) Requirements
-- **Universal Invariants:** Formulate properties that must hold true for *all* valid inputs (e.g., "Severity ordering is monotonic", "Blocked injections never invoke database tools", "Clarification depth is strictly bounded at <= 3").
-- **Generative Arbitraries:** Use generators (`st.text()`, `st.integers()`, `st.sampled_from()`) to produce hundreds of permutations.
-- **Shrinking & Counterexamples:** Ensure failing properties produce minimal failing examples to quickly diagnose edge bugs.
-- **Idempotence & Round-tripping:** Test serialization/deserialization, normalizer idempotence.
+### 3.2 Mandatory 4-Step RCA Protocol
+Execute these four steps sequentially whenever a failure or defect occurs:
+1. **Step 1: Deep Root Cause Analysis (RCA):**
+   - Inspect live database records, ADK `FunctionTool` docstrings, model system prompts, temperature settings, network logs, and stack traces to isolate the true data, cognitive, or architectural root cause.
+2. **Step 2: Transparent Failure Explanation to User:**
+   - Present a factual diagnostic report detailing the exact failing test/prompt, expected vs. actual output, technical root cause mechanics, and supporting log/query evidence.
+3. **Step 3: Present Architectural Fix Options & Trade-Offs:**
+   - Formulate at least **two (2) viable, sustainable architectural options** (e.g., Data Tier Resolution, Cognitive Tool Prompt/Docstring Refinement, or Schema/Contract Hardening) with pros, cons, blast radius, and effort.
+4. **Step 4: Await Explicit User Instruction (`ask_question`) Before Coding:**
+   - Present the options via `ask_question` and wait for the user's explicit selection before writing any code modification.
 
 ---
 
-## 5. Directory Structure & Document Organization
+## 4. Artifact Directory Separation (`specs/` vs. `docs/`)
 
-This project maintains a strict separation between **Spec-Driven Development artifacts (`specs/`)** and **Skill-Generated documentation & operational reports (`docs/`)**:
-
-### 5.1 SDD Specifications (`specs/`)
-All formal specifications, baseline models, feature designs, and implementation progress tracking must reside in the `specs/` directory:
-
-```
-specs/
-├── README.md                      # Index of all specifications and progress reports
-├── templates/
-│   └── sdd-template.md            # Standardized template with Implementation Plan & Testing sections
-├── baseline/                      # Baseline SDDs for existing/brownfield code
-│   └── system-overview.md         # Full system architecture, stack & invariants
-├── features/                      # Feature specifications and enhancement proposals
-│   └── <feature-id>-<title>.md
-└── plan/                          # Living implementation progress reports and milestone tracking
-    └── PROGRESS_REPORT_<DATE>.md
-```
-
-### 5.2 Skill-Generated Documentation & Reports (`docs/`)
-All operational reports, security assessment logs, cloud cost models, and standalone visual assets produced by agent skills must reside in the `docs/` directory:
-- Architecture Diagrams & HTML: `docs/*-architecture.md`, `docs/*-architecture.html`
-- CodeMender Security Reports: `docs/codemender-*.md`
-- GCP Cost Estimations: `docs/gcp_cost_estimate_*.md`
-
----
-
-## 6. Hard Enforcement Rules
-
-1. **No Code Without Spec & Plan:** Reject or pause direct coding requests until the SDD, detailed implementation plan, and test designs are established.
-2. **Unit & Property Tests Required at Every Step:** Code without corresponding unit tests and property-based tests is strictly prohibited.
-3. **Strict Schema Fidelity:** API responses, frontend types, and backend validation schemas must be exact matches to the SDD contracts.
-4. **Zero Spec Drift:** If code changes behavior, the SDD must be updated in the same commit/change.
-5. **Living Plan Progress Tracking:** Never pause development or complete a milestone without recording full progress, test metrics, and next steps in `specs/plan/`.
+- **`specs/` (SDD Artifacts):** Baseline models (`specs/baseline/`), feature specifications (`specs/features/`), reusable templates (`specs/templates/sdd-template.md`), and living progress reports (`specs/plan/`).
+- **`docs/` (Skill-Generated Operational Reports):** Visual architecture diagrams (`docs/*-architecture.md` & `.html`), CodeMender SAST reports (`docs/codemender-*.md`), and live GCP cost estimates (`docs/gcp_cost_estimate_*.md`).

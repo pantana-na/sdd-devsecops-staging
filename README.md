@@ -1,14 +1,21 @@
 # Spec-Driven Development (SDD) & DevSecOps Platform
 
-An enterprise platform and engineering framework operating under strict **Spec-Driven Development (SDD)**, Google Agent Development Kit (ADK) standards, Gemini Enterprise Agent Platform runtime, and multi-tier DevOps/Security governance.
+An enterprise platform and engineering framework operating under the **3-Phase AI-Driven Software Development Lifecycle (AI-SDLC)**, strict **Spec-Driven Development (SDD)**, Google Agent Development Kit (ADK) standards, Gemini Enterprise Agent Platform runtime, and multi-tier DevOps/Security governance.
 
 ---
 
 ## 🏛️ Core Architecture & Governance Pillars
 
-This repository is governed by four core pillars codified under [`_agents/rules/`](./_agents/rules/) and orchestrated via [`AGENTS.md`](./AGENTS.md):
+This repository is governed by five core pillars codified under [`_agents/rules/`](./_agents/rules/), orchestrated by the **[`ai-sdlc` skill](./_agents/skills/ai_sdlc/SKILL.md)** and [`AGENTS.md`](./AGENTS.md):
 
 ```
++=================================================================================================+
+|                  3-Phase AI-Driven Software Development Lifecycle (AI-SDLC)                     |
+|   Phase 1: Inception (Intent & Arch) -> Phase 2: Execution (SDD) -> Phase 3: Operation (Deploy) |
+|   (Proactive ask_question clarification on unknowns & interactive sign-off at every phase gate) |
++=================================================================================================+
+                                                  │
+                                                  ▼
 +-------------------------------------------------------------------------------------------------+
 |                                    Spec-Driven Development (SDD)                                |
 |  - Spec First, Code Second  - Brownfield Baseline Required  - Unit & Property Tests at Every Step |
@@ -55,12 +62,12 @@ Workloads in this project are strictly decoupled across two runtime environments
 ├── AGENTS.md                      # Authoritative Agent Operating Manual & Repository Guidelines
 ├── README.md                      # Project root documentation & architecture overview
 ├── _agents/                       # Agent governance rules and specialized skill toolkits
-│   ├── rules/                     # Core engineering and behavioral rules
+│   ├── rules/                     # Consolidated governance rules (always_on + model_decision)
 │   │   ├── spec_driven_development.md
-│   │   ├── devops_security_and_quality_standards.md
 │   │   ├── google_adk_and_agent_runtime.md
-│   │   └── root_cause_investigation_and_zero_quick_patch.md
+│   │   └── devops_security_and_quality_standards.md
 │   └── skills/                    # Agent operational skills
+│       ├── ai_sdlc/               # End-to-end 3-Phase AI-SDLC orchestrator (Inception, Execution, Operation)
 │       ├── architecture_diagram/  # Technical architecture diagrams & standalone HTML assets
 │       ├── codemender/            # Pre-build SAST vulnerability discovery, triage, and patching
 │       └── gcp_cost_estimator/    # Live GCP Billing API cost estimation & BoM calculation
@@ -79,27 +86,40 @@ Workloads in this project are strictly decoupled across two runtime environments
 
 ---
 
-## 🔄 Spec-Driven Development (SDD) Workflow
+## 🔄 3-Phase AI-SDLC & Spec-Driven Development (SDD) Workflow
 
-Every development task progresses through these sequential phases:
+Every development task is guided by [`_agents/skills/ai_sdlc/SKILL.md`](./_agents/skills/ai_sdlc/SKILL.md) through three gated phases:
 
 ```
-[Phase 0: Baseline Discovery (Brownfield)]
-               │
-               ▼
-[Phase 1: Specification Authoring (specs/features/)]
-               │
-               ▼
-[Phase 2: Detailed Implementation Plan + Test Design (Unit + PBT)]
-               │
-               ▼
-[Phase 3: Stakeholder Alignment & Review]
-               │
-               ▼
-[Phase 4: Step-by-Step Implementation + Unit & Property Tests]
-               │
-               ▼
-[Phase 5: Verification, Spec Sync & Living Plan Progress Tracking (specs/plan/)]
++-------------------------------------------------------------------------+
+| PHASE 1: INCEPTION (Intent Framing & Architecture)                      |
+|  - Elicit business intent, personas, goals/non-goals via ask_question   |
+|  - Identify brownfield vs. greenfield scope (specs/baseline/)           |
+|  - Define Dual-Runtime split (agent_runtime vs cloud_run) & IAM pattern |
+|  - Offer companion skills: architecture-diagram & gcp-cost-estimator    |
++-------------------------------------------------------------------------+
+                                    │
+                     [Gate 1: ask_question Sign-Off]
+                                    ▼
++-------------------------------------------------------------------------+
+| PHASE 2: EXECUTION (The Spec-Driven Development Cycle)                  |
+|  - SDD Phase 0: Baseline Discovery (Brownfield -> specs/baseline/)      |
+|  - SDD Phase 1: Specification Authoring (specs/features/SPEC-*.md)      |
+|  - SDD Phase 2: Detailed Implementation Plan + Test Design (Unit + PBT) |
+|  - SDD Phase 3: Stakeholder Alignment Sub-Gate (ask_question Sign-Off)  |
+|  - SDD Phase 4: Step-by-Step Implementation + Tests (4-Step RCA on fail)|
+|  - SDD Phase 5: Verification, Spec Sync & Living Plan (specs/plan/)     |
++-------------------------------------------------------------------------+
+                                    │
+                     [Gate 2: ask_question Sign-Off]
+                                    ▼
++-------------------------------------------------------------------------+
+| PHASE 3: OPERATION (Integrate Code into Repository & Deploy)            |
+|  - Pre-Merge Gate: Static Analysis + CodeMender SAST + Unified .env     |
+|  - Git Multi-Branch Integration (main/develop -> reviewed PR to prod)   |
+|  - Dual-Runtime Deploy: agents-cli deploy + Cloud Build & Terraform IaC |
+|  - Post-Deploy Gate: Live /healthz smoke tests + live agents-cli eval   |
++-------------------------------------------------------------------------+
 ```
 
 ### Mandatory Testing Standards for Every Step
@@ -112,6 +132,7 @@ Every development task progresses through these sequential phases:
 
 ## 🛠️ Integrated Skills & Capabilities
 
+- **`ai-sdlc`:** Master 3-Phase AI-SDLC orchestrator guiding developers through Inception, SDD Execution, and Operation with proactive clarification questions (`ask_question`) and phase gate validation (`validate_sdlc_gate.py`).
 - **`codemender`:** Pre-build SAST orchestration discovering vulnerabilities (`cm find`), generating PoC exploit verification (`cm verify`), and producing remediated code diffs (`cm fix`).
 - **`gcp_cost_estimator`:** Enterprise cloud cost modeling querying real-time unit pricing strictly from the live Google Cloud Billing API (zero local caching) and calculating itemized BoMs with CUD savings.
 - **`architecture_diagram`:** Generates professional, dark-themed technical system diagrams with interactive SVG/HTML companion visualizers.
@@ -120,6 +141,8 @@ Every development task progresses through these sequential phases:
 
 ## 📖 Key References
 - **Operating Manual:** [`AGENTS.md`](./AGENTS.md)
+- **AI-SDLC, SDD & RCA Rule:** [`_agents/rules/spec_driven_development.md`](./_agents/rules/spec_driven_development.md)
+- **AI-SDLC Skill:** [`_agents/skills/ai_sdlc/SKILL.md`](./_agents/skills/ai_sdlc/SKILL.md)
 - **Specification Registry:** [`specs/README.md`](./specs/README.md)
 - **SDD Template:** [`specs/templates/sdd-template.md`](./specs/templates/sdd-template.md)
 - **Operational Reports:** [`docs/README.md`](./docs/README.md)

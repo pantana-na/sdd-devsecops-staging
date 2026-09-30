@@ -12,7 +12,7 @@ Under the **Spec-Driven Development (SDD)** standard ([`_agents/rules/spec_drive
    - **Step-by-Step Progress Matrix:** Table detailing completed vs pending steps, implemented source files, unit test suites, property-based test suites, and live evaluation passes.
    - **Verification & Quality Metrics:** Test pass rates, evaluation benchmark scores ($\ge 95\%$ tool selection precision, 1.000 groundedness), and latency figures.
    - **Architectural & Design Decisions:** Non-obvious design choices, trade-offs, and user alignments made during development.
-   - **Root Cause Analysis (RCA) Log:** If any defects, red tests, or eval regressions were investigated, summarize the 4-step RCA findings and user-selected fixes ([`_agents/rules/root_cause_investigation_and_zero_quick_patch.md`](../../_agents/rules/root_cause_investigation_and_zero_quick_patch.md)).
+   - **Root Cause Analysis (RCA) Log:** If any defects, red tests, or eval regressions were investigated, summarize the 4-step RCA findings and user-selected fixes ([`_agents/rules/spec_driven_development.md`](../../_agents/rules/spec_driven_development.md)).
    - **Resumption Guide & Next Actions:** Explicit next steps for resuming development seamlessly.
 
 ## Document Naming Convention

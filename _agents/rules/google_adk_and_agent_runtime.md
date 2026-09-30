@@ -1,3 +1,8 @@
+---
+trigger: model_decision
+description: "Load and enforce this rule whenever designing, implementing, evaluating, or deploying conversational AI agents, LLM reasoning workflows, FunctionTool registries, Model Armor callbacks, or Gemini Enterprise Agent Platform (agent_runtime / agents-cli) workloads."
+---
+
 # Rule: Google Agent Development Kit (ADK), Agent Runtime & Model-Driven Reasoning Standards
 
 ## Core Mandate
@@ -126,7 +131,7 @@ Evaluation datasets (`evals/datasets/*.jsonl`) must be comprehensive and represe
   - Weakening eval criteria or deleting failing test cases to artificially inflate metrics.
 - **Mandated Action on Eval Failure:**
   - Investigate the root cause in prompt instructions, tool docstrings, database records, or model temperature.
-  - Follow the **Root Cause Investigation & Zero Quick-Patch Rule** (`_agents/rules/root_cause_investigation_and_zero_quick_patch.md`).
+  - Follow the **Mandatory 4-Step Root Cause Investigation (RCA) Protocol** ([`_agents/rules/spec_driven_development.md`](./spec_driven_development.md)).
 
 ---
 

@@ -1,7 +1,12 @@
+---
+trigger: model_decision
+description: "Load and enforce this rule whenever configuring Git branches, running static code quality analysis, executing CodeMender SAST (cm), managing .env parameters, writing Dockerfiles or Cloud Build pipelines (cloudbuild.yaml), configuring Cloud Run services (/healthz, logging, monitoring), writing Terraform Infrastructure Manager IaC, or designing IAM/Ingress authentication."
+---
+
 # Rule: DevOps, Quality, Security & Cloud Architecture Standards
 
 ## Core Mandate
-In addition to Spec-Driven Development (SDD), all software engineering, repository management, CI/CD pipeline automation, and cloud deployments must strictly adhere to the following 10 fundamental rules:
+In addition to the 3-Phase AI-SDLC and Spec-Driven Development (SDD) ([`spec_driven_development.md`](./spec_driven_development.md)), all software engineering, repository management, CI/CD pipeline automation, and cloud deployments must strictly adhere to the following 10 fundamental rules:
 
 ---
 

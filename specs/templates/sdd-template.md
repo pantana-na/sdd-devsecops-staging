@@ -92,10 +92,11 @@ export interface ExampleDataModel {
 ---
 
 ## 6. DevOps, Security, Cloud & Agent Governance Checklist
-Ensure alignment with the 13 fundamental engineering standards:
+Ensure alignment with the repository's fundamental engineering and AI-SDLC standards:
 
 | Rule | Area | Requirement / Architecture Specification |
 | :--- | :--- | :--- |
+| **AI-SDLC** | **3-Phase Lifecycle & Gates** | Orchestrated via [`ai-sdlc` skill](../../_agents/skills/ai_sdlc/SKILL.md) ([`spec_driven_development.md`](../../_agents/rules/spec_driven_development.md)): Phase 1 (Inception) $\rightarrow$ Phase 2 (Execution/SDD) $\rightarrow$ Phase 3 (Operation). Zero unconfirmed assumptions (`ask_question` on unknowns & interactive phase gate sign-offs). |
 | **Rule 1** | **SCM & Multi-Branch** | Single GitHub repository; Non-Prod (`main`/`develop`) vs Prod (`prod`/`release`). Reviewed PR promotion. |
 | **Rule 2** | **Code Quality** | Automated static analysis, strict type-checking, zero critical code smells or maintainability regressions. |
 | **Rule 3** | **SAST & CodeMender** | Pre-build vulnerability scan, triage, and patching via CodeMender (`cm find`, `cm verify`, `cm fix`). Reports in `docs/`. |
@@ -116,7 +117,7 @@ Ensure alignment with the 13 fundamental engineering standards:
 
 > [!IMPORTANT]
 > Every step MUST define both deterministic Unit Tests and generative Property-Based Tests (PBT) before writing production code.
-> If any test or evaluation fails during implementation, execute the **Mandatory Root Cause Investigation Protocol** (`_agents/rules/root_cause_investigation_and_zero_quick_patch.md`) — zero quick fixes or assertion weakening.
+> If any test or evaluation fails during implementation, execute the **Mandatory 4-Step Root Cause Investigation Protocol** (`_agents/rules/spec_driven_development.md`) — zero quick fixes or assertion weakening.
 
 ### Step 1: Core Data Models, Type Contracts & Validation Schemas
 - **Implementation:** Codify foundational domain models, schema validators, and data contracts.
